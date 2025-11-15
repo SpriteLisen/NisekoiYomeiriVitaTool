@@ -702,7 +702,7 @@ class TableException(Exception):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="This is a tool for APK found in certain games.",
+    parser = argparse.ArgumentParser(description="This is a tool for rebuild idx file.",
                                      add_help=False)
     parser.add_argument("-i", type=str, required=True, nargs="+")
     parser.add_argument("-o", type=str, required=True)
