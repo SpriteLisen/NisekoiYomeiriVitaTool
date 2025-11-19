@@ -1446,17 +1446,116 @@ class UnpackApk:
 
 
 class PatchApk:
-    def __init__(self, i: list, o: str):
+    def __init__(self, i: list, o: str, compression_level: int = 1, skip_validation: bool = True):
         self.INPUT_APK_PATH: str = i[0]
         self.INPUT_DIR_PATH: str = i[1]
         self.OUTPUT_PATCHED_PATH: str = o
+        self.COMPRESSION_LEVEL = compression_level  # 压缩级别，1=最快
+        self.SKIP_VALIDATION = skip_validation  # 是否跳过验证
         self.APK = None
         self.TREE: dict = dict()
 
         self.__original_md5 = None
         self.__dumped_md5 = None
 
+    def _get_file_hash(self, filepath: str) -> str:
+        """计算文件的MD5哈希值"""
+        hasher = hashlib.md5()
+        with open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    def _get_original_file_info(self) -> dict:
+        """获取原始APK中所有文件的哈希信息"""
+        file_info = {}
+
+        # 处理根文件
+        for file_path, toc_segment in self.TREE["ROOT"].items():
+            if int(toc_segment.IDENTIFIER) == 1:  # 跳过目录
+                continue
+
+            file_idx = toc_segment.file_index
+            if 0 <= file_idx < len(self.APK.ROOT_FILES.FILE_LIST):
+                file_data = self.APK.ROOT_FILES.FILE_LIST[file_idx].DATA
+
+                # 如果是压缩文件，解压后计算哈希
+                if int(toc_segment.IDENTIFIER) == 512:
+                    try:
+                        original_data = zlib.decompress(file_data)
+                    except:
+                        original_data = file_data
+                else:
+                    original_data = file_data
+
+                file_info[file_path] = hashlib.md5(original_data).hexdigest()
+
+        # 处理归档文件
+        for archive_name, files in self.TREE["ARCHIVE"].items():
+            for file_path, file_seg in files.items():
+                archive = self.APK.PACKFSLS.NAME_ARCHIVE_MAP.get(archive_name)
+                if not archive:
+                    continue
+
+                file_idx = file_seg.file_index
+                if 0 <= file_idx < len(archive.FILES.FILE_LIST):
+                    file_data = archive.FILES.FILE_LIST[file_idx].DATA
+
+                    # 如果是压缩文件，解压后计算哈希
+                    if int(file_seg.ZIP) == 2:
+                        try:
+                            original_data = zlib.decompress(file_data)
+                        except:
+                            original_data = file_data
+                    else:
+                        original_data = file_data
+
+                    full_path = f"__ARCHIVE__/{archive_name}/{file_path}"
+                    file_info[full_path] = hashlib.md5(original_data).hexdigest()
+
+        return file_info
+
+    def _get_truly_changed_files(self) -> list:
+        """检测内容变更的文件"""
+        changed_files = []
+        original_file_info = self._get_original_file_info()
+
+        print("Scanning for changed files...")
+        all_files = get_changed_file_path(self.INPUT_DIR_PATH)
+
+        for rel_path in all_files:
+            # 跳过归档目录本身
+            if rel_path.startswith("__ARCHIVE__") and rel_path.count('/') < 2:
+                continue
+
+            full_path = os.path.join(self.INPUT_DIR_PATH, rel_path)
+
+            # 检查文件是否在原始 APK 中存在
+            if rel_path in original_file_info:
+                try:
+                    current_hash = self._get_file_hash(full_path)
+                    original_hash = original_file_info[rel_path]
+
+                    # 比较文件哈希值
+                    if current_hash != original_hash:
+                        changed_files.append(rel_path)
+                        print(f"Changed: {rel_path}")
+                    # 否则文件未变更, 跳过
+
+                except Exception as e:
+                    print(f"Error reading file {rel_path}: {e}")
+                    changed_files.append(rel_path)
+            else:
+                # 新文件
+                changed_files.append(rel_path)
+                print(f"New file: {rel_path}")
+
+        return changed_files
+
     def patch(self):
+        import time
+        start_time = time.time()
+
         print(f"Reading apk file {self.INPUT_APK_PATH}")
         apk_reader = APKReader(self.INPUT_APK_PATH)
         apk_reader.read()
@@ -1470,9 +1569,14 @@ class PatchApk:
             print("Warning! The original file and the dumped file do not match. The dump result may be inaccurate.")
             print(f"{self.__original_md5} != {self.__dumped_md5}")
 
-        print(f"Get changed file list...")
-        changed_files = get_changed_file_path(self.INPUT_DIR_PATH)
-        print(f"{len(changed_files)} changed files.")
+        print(f"Detecting changed files...")
+        changed_files = self._get_truly_changed_files()
+
+        if not changed_files:
+            print("No files have been changed. Skipping packaging.")
+            return
+
+        print(f"Found {len(changed_files)} changed files.")
 
         for idx, changed_file in enumerate(changed_files):
             print(f"\r\033[KPatching...[{idx + 1}/{len(changed_files)}] {changed_file}", end="")
@@ -1490,7 +1594,7 @@ class PatchApk:
                         seg.FILE_ZSIZE = uint64(0)
                     elif _zip == 2:
                         seg.FILE_SIZE = uint64(len(data))
-                        data = zlib.compress(data, level=9)
+                        data = zlib.compress(data, level=self.COMPRESSION_LEVEL)
                         seg.FILE_ZSIZE = uint64(len(data))
                     else:
                         raise Exception(f"unknown ZIP {_zip}")
@@ -1508,7 +1612,8 @@ class PatchApk:
                         seg.FILE_ZSIZE = uint64(0)
                     elif identifier == 512:
                         seg.FILE_SIZE = uint64(len(data))
-                        data = zlib.compress(data, level=9)
+                        # 使用配置的压缩级别而不是固定的9
+                        data = zlib.compress(data, level=self.COMPRESSION_LEVEL)
                         seg.FILE_ZSIZE = uint64(len(data))
                     else:
                         raise Exception(f"unknown identifier {identifier}")
@@ -1518,7 +1623,7 @@ class PatchApk:
                     padding_cnt = get_root_file_padding_cnt(len(file.DATA))
                     file.PADDING = copy.deepcopy(bytearray(padding_cnt))
 
-        print()
+        print(f"\nFile processing completed. Time: {time.time() - start_time:.2f}s")
 
         print("Update offsets...")
         apk_reader.update_offsets()
@@ -1528,11 +1633,16 @@ class PatchApk:
         with open(self.OUTPUT_PATCHED_PATH, "wb") as f:
             f.write(self.APK.to_bytearray())
 
-        print("Validating patched apk...")
-        temp = APKReader(self.OUTPUT_PATCHED_PATH)
-        temp.read()
+        if not self.SKIP_VALIDATION:
+            print("Validating patched apk...")
+            temp = APKReader(self.OUTPUT_PATCHED_PATH)
+            temp.read()
+            print("Validation OK.")
+        else:
+            print("Validation skipped.")
 
-        print("OK.")
+        total_time = time.time() - start_time
+        print(f"Total packaging time: {total_time:.2f}s")
 
 
 if __name__ == "__main__":
@@ -1555,6 +1665,6 @@ if __name__ == "__main__":
     if args.script == "unpack":
         UnpackApk(args.i, args.o, args.e).extract()
     elif args.script == "pack":
-        PatchApk(args.i, args.o).patch()
+        PatchApk(args.i, args.o, 9, True).patch()
     else:
         raise RuntimeError("Unsupported params")
