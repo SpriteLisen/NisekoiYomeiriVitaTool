@@ -248,7 +248,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         char_height_actual = bottom - top
 
         x_offset = column
-        y_offset = row - 2
+        y_offset = row - 1
 
         # 最终边界检查
         if (x_offset + char_width <= img_width and
@@ -351,16 +351,39 @@ def parse_use_chars():
     folder = Path("scripts/extract")
     for csv_file in folder.glob("*.csv"):
         try:
-            with open(csv_file, 'r', encoding='utf-8', newline='') as f:
+            with open(csv_file, 'r', encoding='utf-8-sig', newline='') as f:
                 reader = csv.reader(f)
                 next(reader, None)
                 for row in reader:
-                    if len(row) >= 2:
+                    if len(row) >= 3:
                         text = row[1].strip()
+                        trans_text = row[2].strip()
+                        if trans_text:
+                            text = trans_text
+
                         if text:
-                            all_chars.extend(list(text.replace('_r', '\n')))
+                            all_chars.extend(list(text.replace('@n', '\n')))
         except Exception as e:
             print(f"Error processing {csv_file}: {e}")
+
+    folder = Path("gop_data/extract")
+    for csv_file in folder.glob("*.csv"):
+        try:
+            with open(csv_file, 'r', encoding='utf-8-sig', newline='') as f:
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if len(row) >= 3:
+                        text = row[1].strip()
+                        trans_text = row[2].strip()
+                        if trans_text:
+                            text = trans_text
+
+                        if text:
+                            all_chars.extend(list(text.replace('@n', '\n')))
+        except Exception as e:
+            print(f"Error processing {csv_file}: {e}")
+
     return all_chars
 
 

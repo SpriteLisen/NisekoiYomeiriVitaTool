@@ -3,7 +3,7 @@ import csv
 from pathlib import Path
 
 default_encode = "utf-8"
-break_line_char = "_r"
+break_line_char = "@n"
 
 
 class ASBStringTool:
@@ -164,9 +164,9 @@ class ASBStringTool:
                 opcode = get8(data, cur)
 
         Path(csv_out).parent.mkdir(parents=True, exist_ok=True)
-        with open(csv_out, "w", encoding=default_encode, newline="") as fw:
+        with open(csv_out, "w", encoding='utf-8-sig', newline="") as fw:
             writer = csv.writer(fw)
-            writer.writerow(["offset", "string"])
+            writer.writerow(["offset", "string", "translate"])
             for idx, positions in indices_of_string_indices.items():
                 # s = indexed_strings.get(idx, "<unknown>")
                 # if self.should_ignore_string(s):
@@ -176,7 +176,7 @@ class ASBStringTool:
                     continue
 
                 for p in positions:
-                    writer.writerow([hex(p), s])
+                    writer.writerow([hex(p), s, ''])
         print(f"Extract finished → {csv_out}")
 
     def extract_folder(self, input_folder: str, output_folder: str):
@@ -202,7 +202,7 @@ class ASBStringTool:
             tail_data = bytearray()  # 没有尾部数据
 
         rows = []
-        with open(csv_file, "r", encoding=default_encode) as fr:
+        with open(csv_file, "r", encoding='utf-8-sig') as fr:
             reader = csv.reader(fr)
             next(reader, None)
             for row in reader:
@@ -212,12 +212,17 @@ class ASBStringTool:
                     pointer_pos = int(row[0], 16)
                 except:
                     continue
-                rows.append((pointer_pos, row[1]))
+                rows.append((pointer_pos, row[1], row[2]))
 
         # 追加数据从原始字符串区尾部开始
         write_cursor = string_section_start + original_string_len
-        for pointer_pos, s in rows:
+        for pointer_pos, s, trans_str in rows:
             new_bytes = s.replace(break_line_char, "\n").encode(default_encode) + b"\x00"
+
+            # 有翻译就应用翻译到最终文件
+            if trans_str:
+                new_bytes = trans_str.replace(break_line_char, "\n").encode(default_encode) + b"\x00"
+
             data.extend(new_bytes)
             new_offset = write_cursor - string_section_start  # 字符串区内相对偏移
             data[pointer_pos:pointer_pos + 4] = new_offset.to_bytes(4, "little")
