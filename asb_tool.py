@@ -1,3 +1,4 @@
+import re
 import sys
 import csv
 from pathlib import Path
@@ -5,6 +6,140 @@ from pathlib import Path
 default_encode = "utf-8"
 break_line_char = "@n"
 
+
+say_title_prefix = "@say "
+
+say_title_map = {
+    'rak': "【乐】",
+    'ctg': "【千棘】",
+    'ksk': "【小咲】",
+    'ssr': "【诚士郎】",
+    'mrk': "【万里花】",
+    'rur': "【琉璃】",
+    'syu': "【集】",
+    'cld': "【克劳德】",
+    'otm': "【小野寺】",
+    'kyk': "【教子老师】",
+    'rap': "【乐的父亲】",
+    'ctp': "【阿德鲁特】",
+    'ryu': "【龙】",
+    'ksm': "【小咲的母亲】",
+    'hnd': "【本田】",
+    'mrp': "【万里花的父亲】",
+    'mtg': "【华】",
+    'ss1': "【诚士郎（乐）】",
+    'ra1': "【乐（诚士郎）】",
+    'ot1': "【小野寺（琉璃）】",
+    'bab': "【鬼牌】",
+    'snk': "【蛇】",
+    'ask': "【海狮】",
+    'ign': "【鬣蜥】",
+    'ibr': "【伊比利亚猪】",
+    'trt': "【龟】",
+    'crw': "【乌鸦】",
+    'niw': "【鸡】",
+    'mnt': "【山魈】",
+    'agt': "【鳄鱼】",
+    'dog': "【狗】",
+    'ktn': "【小猫】",
+    'crn': "【鹤】",
+    'cat': "【猫】",
+    'sdg': "【野狗】",
+    'ham': "【仓鼠】",
+    'ugr': "【牛蛙】",
+    'wow': "【猴子】",
+    'wst': "【女学生】",
+    'wsa': "【女学生A】",
+    'wsb': "【女学生B】",
+    'wsc': "【女学生C】",
+    'wsd': "【女学生D】",
+    'wvb': "【女子排球社员】",
+    'wkd': "【女子剑道社员】",
+    'wtk': "【女子田径社员】",
+    'bik': "【美化委员】",
+    'mst': "【男学生】",
+    'msa': "【男学生A】",
+    'msb': "【男学生B】",
+    'msc': "【男学生C】",
+    'msd': "【男学生D】",
+    'mse': "【男学生E】",
+    'mta': "【田径社员A】",
+    'mtb': "【田径社员B】",
+    'jka': "【学长A】",
+    'jkb': "【学姐B】",
+    'jkc': "【学长C】",
+    'stk': "【学生会干部】",
+    'cpa': "【小混混A】",
+    'cpb': "【小混混B】",
+    'sea': "【年轻手下A】",
+    'seb': "【年轻手下B】",
+    'sec': "【年轻手下C】",
+    'sed': "【年轻手下D】",
+    'gna': "【黑帮分子A】",
+    'gnb': "【黑帮分子B】",
+    'gnc': "【黑帮分子C】",
+    'gnd': "【黑帮分子D】",
+    'pla': "【机动队员A】",
+    'plb': "【机动队员B】",
+    'plc': "【机动队员C】",
+    'cpu': "【ＣＰＵ】",
+    'evs': "【活动工作人员】",
+    'gca': "【游戏中心顾客A】",
+    'gcb': "【游戏中心顾客B】",
+    'gcs': "【游戏中心店员】",
+    'stm': "【系统】",
+    'tak': "【章鱼烧摊大叔】",
+    'ana': "【播音员】",
+    'pro': "【制作人】",
+    'fna': "【粉丝A】",
+    'fnb': "【粉丝B】",
+    'fnc': "【粉丝C】",
+    'fnd': "【粉丝D】",
+    'fne': "【粉丝E】",
+    'fnf': "【粉丝F】",
+    'mas': "【媒体】",
+    'pcp': "【男性参加者】",
+    'chm': "【主持人】",
+    'chd': "【小孩】",
+    'owr': "【饲主】",
+    'mdl': "【人体模型】",
+    'tlp': "【电话自动应答】",
+    'nza': "【谜之声A】",
+    'nzb': "【谜之声B】",
+    'nzc': "【谜之声C】",
+    'nzd': "【谜之声D】",
+    'nze': "【谜之声E】",
+    'mtr': "【母亲】",
+    'lvr': "【恋爱中的少女】",
+    'dlc_ctg': "【DLC 千棘】",
+    'dlc_ksk': "【DLC 小咲】",
+    'dlc_ssr': "【DLC 诚士郎】",
+    'dlc_mrk': "【DLC 万里花】",
+    'dlc_rur': "【DLC 琉璃】",
+    'ano': "【？？？】",
+    'rak_syu': "【乐＆集】",
+    'rak_ctg': "【乐＆千棘】",
+    'rak_ksk': "【乐＆小咲】",
+    'rak_ssr': "【乐＆诚士郎】",
+    'rak_mrk': "【乐＆万里花】",
+    'rak_mtg': "【乐＆华】",
+    'ctg_mrk': "【千棘＆万里花】",
+    'ctg_mtg': "【千棘＆华】",
+    'ctg_ksk': "【千棘＆小咲】",
+    'ksk_mrk': "【小咲＆万里花】",
+    'syu_rur': "【集＆琉璃】",
+    'syu_seg': "【集＆年轻手下们】",
+    'cld_ryu': "【克劳德＆龙】",
+    'all': "【大家】",
+    'raks': "【乐等人】",
+    'ctgs': "【千棘等人】",
+    'ksks': "【小咲等人】",
+    'mrks': "【万里花等人】",
+    'mss': "【男学生们】",
+    'pls': "【机动队员们】",
+    'st_all': "【全体学生】",
+    'w_spts': "【女社员们】",
+}
 
 class ASBStringTool:
     @staticmethod
@@ -69,11 +204,21 @@ class ASBStringTool:
             return True
         if s == "__main":
             return True
-        # 以三个字母+/ 开头的都筛掉
+        # 以三个字母+/ 开头的都筛掉, 这个是标注人名的, 应该是用来做引用人名的变量
         # if s[:4] in ("CTG/", "RAK/", "MRK/", "SSR/", "SYU/", "RUR/", "KSK/"):
-        if len(s) >= 4 and s[:3].isalpha() and s[3] == '/':
-            return True
+        # if len(s) >= 4 and s[:3].isalpha() and s[3] == '/':
+        #     return True
         return False
+
+
+    @staticmethod
+    def replace_say_title(s: str) -> str:
+        pattern = r'^([a-zA-Z][a-zA-Z_]*[a-zA-Z])/([a-zA-Z0-9]+)$'
+        match = re.match(pattern, s)
+        if match:
+            return f'{say_title_prefix}{say_title_map[match.group(1).lower()]}'
+        else:
+            return s
 
     def extract_single(self, infile: str, csv_out: str):
         data = bytearray(open(infile, "rb").read())
@@ -176,7 +321,7 @@ class ASBStringTool:
                     continue
 
                 for p in positions:
-                    writer.writerow([hex(p), s, ''])
+                    writer.writerow([hex(p), self.replace_say_title(s), ''])
         print(f"Extract finished → {csv_out}")
 
     def extract_folder(self, input_folder: str, output_folder: str):
@@ -212,6 +357,11 @@ class ASBStringTool:
                     pointer_pos = int(row[0], 16)
                 except:
                     continue
+
+                # 忽略带说话人姓名的, 此为提示行, 不需要往回插入
+                if row[1].startswith(say_title_prefix):
+                    continue
+
                 rows.append((pointer_pos, row[1], row[2]))
 
         # 追加数据从原始字符串区尾部开始
