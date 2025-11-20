@@ -248,7 +248,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         char_height_actual = bottom - top
 
         x_offset = column
-        y_offset = row - 1
+        y_offset = row - 2
 
         # 最终边界检查
         if (x_offset + char_width <= img_width and

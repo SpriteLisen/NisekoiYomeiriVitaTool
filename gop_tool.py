@@ -1,10 +1,17 @@
 import os
+import re
 import csv
 import sys
 import glob
 from pathlib import Path
 
 break_line_char = "@n"
+
+def is_alpha_underscore(text):
+    """
+    判断字符串是否只包含大小写字母和下划线
+    """
+    return bool(re.match(r'^[a-zA-Z_]+$', text))
 
 def parse_gop_file(file_path):
     """
@@ -170,14 +177,22 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
 
         # 构建字符串内容
         for idx, string in enumerate(csv_strings):
+            is_text_command = is_alpha_underscore(string)
+
             # 如果是SelfId，在前面添加00字节
             if string == "SelfId":
                 new_string_data += b'\x00'
                 string_offsets.append(1)
 
             # 添加字符串内容和 null 终止符
-            if csv_translate[idx]:
-                new_string_data += csv_translate[idx].encode('utf-8') + b'\x00'
+            trans_text = csv_translate[idx]
+            if trans_text:
+                is_trans_command = is_alpha_underscore(trans_text)
+
+                if is_text_command and not is_trans_command:
+                    raise RuntimeError(f'不符合翻译规则: {string}')
+
+                new_string_data += trans_text.encode('utf-8') + b'\x00'
             else:
                 new_string_data += string.encode('utf-8') + b'\x00'
 
