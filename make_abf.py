@@ -336,6 +336,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
     with open(output_abf_path, "wb") as f:
         f.write(new_abf)
 
+    Path(output_png_path.parent).mkdir(parents=True, exist_ok=True)
     new_image.save(output_png_path)
 
     print(f"\nSuccessfully created:")
@@ -393,7 +394,7 @@ if __name__ == "__main__":
     ORIGINAL_PNG = "font/origin/font_j24x24_0.png"
     NEW_FONT = "font/ttf/WenQuanDengKuanWeiMiHei.ttf"
     OUTPUT_ABF = "font_j24x24.abf"
-    OUTPUT_PNG = "font_j24x24_0.png"
+    OUTPUT_PNG = "images/modified/font/font_j24x24/font_j24x24_0.png"
 
     all_chars = parse_use_chars()
 
