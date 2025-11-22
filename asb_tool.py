@@ -6,7 +6,6 @@ from pathlib import Path
 default_encode = "utf-8"
 break_line_char = "@n"
 
-
 say_title_prefix = "@say "
 
 say_title_map = {
@@ -141,6 +140,7 @@ say_title_map = {
     'w_spts': "【女社员们】",
 }
 
+
 class ASBStringTool:
     @staticmethod
     def get_null_terminated_string_at(data: bytearray, position: int) -> str:
@@ -210,11 +210,14 @@ class ASBStringTool:
         #     return True
         return False
 
+    @staticmethod
+    def is_say_style(s: str):
+        pattern = r'^([a-zA-Z][a-zA-Z_]*[a-zA-Z])/([a-zA-Z0-9]+)$'
+        return re.match(pattern, s)
 
     @staticmethod
     def replace_say_title(s: str) -> str:
-        pattern = r'^([a-zA-Z][a-zA-Z_]*[a-zA-Z])/([a-zA-Z0-9]+)$'
-        match = re.match(pattern, s)
+        match = ASBStringTool.is_say_style(s)
         if match:
             return f'{say_title_prefix}{say_title_map[match.group(1).lower()]}'
         else:
@@ -359,7 +362,7 @@ class ASBStringTool:
                     continue
 
                 # 忽略带说话人姓名的, 此为提示行, 不需要往回插入
-                if row[1].startswith(say_title_prefix):
+                if row[1].startswith(say_title_prefix) or ASBStringTool.is_say_style(row[1]):
                     continue
 
                 rows.append((pointer_pos, row[1], row[2]))
