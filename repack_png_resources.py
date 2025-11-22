@@ -1,3 +1,4 @@
+import platform
 import subprocess
 from pathlib import Path
 
@@ -10,18 +11,29 @@ def convert_png_to_dds(png_file, output_dir):
     将 PNG 文件转换为 DDS 文件
     """
     try:
+        command = []
+        system = platform.system()
+
+        if system == "Darwin" or system == "Linux":
+            command.append("wine")
+
+        command.extend(
+            [
+                r".\tools\texconv\texconv.exe",
+                "-f", "DXT3",
+                "-ft", "dds",
+                "-o", output_dir,
+                "-y",
+                f"{png_file}"
+            ]
+        )
+
         # 执行 texconv 转换命令
-        subprocess.run([
-            r".\tools\texconv\texconv.exe",
-            "-f", "DXT3",
-            "-ft", "dds",
-            "-o", output_dir,
-            "-y",
-            f"{png_file}"
-        ],
+        subprocess.run(
+            command,
             check=True,
             capture_output=True,
-            text=True
+            # text=True
         )
         print(f"Convert {png_file.name} to dds succeed!")
     except subprocess.CalledProcessError as e:
@@ -40,12 +52,22 @@ def convert_dds_to_gxt(dds_file, output_dir):
         # 构建输出GXT文件路径
         gxt_output_path = output_dir / f"{dds_file.stem}{prefix_gxt}"
 
+        command = []
+        system = platform.system()
+
+        if system == "Darwin" or system == "Linux":
+            command.append("wine")
+
+        command.extend(
+            [r".\tools\psp2gxt\psp2gxt.exe", "-i", dds_file, "-o", str(gxt_output_path)]
+        )
+
         # 执行 psp2gxt 转换命令
         subprocess.run(
-            [r".\tools\psp2gxt\psp2gxt.exe", "-i", dds_file, "-o", str(gxt_output_path)],
+            command,
             check=True,
             capture_output=True,
-            text=True
+            # text=True
         )
         print(f"Convert {dds_file.name} to gxt succeed!")
     except subprocess.CalledProcessError as e:
@@ -116,6 +138,7 @@ def process_png_files(input_dir, output_dir):
 
 def main():
     input_directory = "images/modified"
+    # input_directory = "images/origin"
     output_directory = "images/rebuild"
 
     # 处理PNG文件
