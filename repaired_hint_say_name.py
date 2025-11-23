@@ -17,6 +17,14 @@ REPLACEMENT_RULES = {
     "@say 【华】": "@say 【桐崎 华】",
 }
 
+CODE_REPLACEMENT_RULES = {
+    "CTG/": "@say 【桐崎 千棘】",
+    "KSK/": "@say 【小野寺 小咲】",
+    "MRK/": "@say 【橘 万里花】",
+    "RUR/": "@say 【宫本 琉璃】",
+    "SSR/": "@say 【鸫 诚士郎】",
+}
+
 
 def replace_in_csv(file_path):
     """
@@ -40,9 +48,17 @@ def replace_in_csv(file_path):
                     for rule_old, rule_new in REPLACEMENT_RULES.items():
                         row[1] = row[1].replace(rule_old, rule_new)
 
+                    for rule_old, rule_new in CODE_REPLACEMENT_RULES.items():
+                        if rule_old in row[1]:
+                            row[1] = rule_new
+
                 if len(row) > 2:  # 确保有第三列
                     for rule_old, rule_new in REPLACEMENT_RULES.items():
                         row[2] = row[2].replace(rule_old, rule_new)
+
+                    for rule_old, rule_new in CODE_REPLACEMENT_RULES.items():
+                        if rule_old in row[2]:
+                            row[2] = rule_new
 
                 modified_rows.append(row)
 
