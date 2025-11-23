@@ -3,8 +3,8 @@ from pathlib import Path
 from fontTools.ttLib.ttFont import TTFont
 from PIL import Image, ImageDraw, ImageFont
 
-
 font_size = 24
+
 
 def modify_font_preserve_structure(original_abf_path, original_png_path, char_list, output_abf_path, output_png_path,
                                    font_path):
@@ -336,7 +336,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
     with open(output_abf_path, "wb") as f:
         f.write(new_abf)
 
-    Path(output_png_path.parent).mkdir(parents=True, exist_ok=True)
+    Path(output_png_path).parent.mkdir(parents=True, exist_ok=True)
     new_image.save(output_png_path)
 
     print(f"\nSuccessfully created:")
