@@ -26,8 +26,8 @@
 0x0414,R_SneakMission008,
 0x0418,R_SneakMission009,
 0x041C,R_SneakMission010,
-0x0420,カワリミ,
-0x0424,クロードがいつにも増しておかしい@n廊下の反対側までたどり着け！,
+0x0420,カワリミ,《伪装》
+0x0424,クロードがいつにも増しておかしい@n廊下の反対側までたどり着け！,克劳德比平时更加反常@n想办法到达走廊的另一端！
 0x0428,R_SneakMission011,
 0x042C,R_SneakMission012,
 0x0430,R_SneakMission013,
@@ -38,8 +38,8 @@
 0x0444,R_SneakMission018,
 0x0448,R_SneakMission019,
 0x044C,R_SneakMission020,
-0x0450,スクエル,
-0x0454,今ならまだ間に合う……！@n振り返らずに、千棘の元へ！！,
+0x0450,スクエル,《逃离》
+0x0454,今ならまだ間に合う……！@n振り返らずに、千棘の元へ！！,现在还来得及……！@n不要回头，快去千棘身边！！
 0x0458,hlw,
 0x045C,R_SneakMission021,
 0x0460,gsr,
@@ -52,8 +52,8 @@
 0x047C,R_SneakMission028,
 0x0480,R_SneakMission029,
 0x0484,R_SneakMission030,
-0x0488,デンセツ,
-0x048C,もう誰にも邪魔させるな！@n小野寺の待つ伝統の樹にたどり着け！,
+0x0488,デンセツ,《传说》
+0x048C,もう誰にも邪魔させるな！@n小野寺の待つ伝統の樹にたどり着け！,绝不让任何人再妨碍！@n抵达小野寺等待的传统之树！
 0x0490,hec,
 0x0494,R_SneakMission031,
 0x0498,gym,
@@ -66,8 +66,8 @@
 0x04B4,R_SneakMission038,
 0x04B8,R_SneakMission039,
 0x04BC,R_SneakMission040,
-0x04C0,ヌレギヌ,
-0x04C4,恐るべし、死に至る誤解@n怒れるつぐみから逃げ延びろ！！,
+0x04C0,ヌレギヌ,《湿衣》
+0x04C4,恐るべし、死に至る誤解@n怒れるつぐみから逃げ延びろ！！,可怕的、足以致命的误解@n从愤怒的鸫手中逃脱吧！！
 0x04C8,R_SneakMission041,
 0x04CC,R_SneakMission042,
 0x04D0,R_SneakMission043,
@@ -78,8 +78,8 @@
 0x04E4,R_SneakMission048,
 0x04E8,R_SneakMission049,
 0x04EC,R_SneakMission050,
-0x04F0,オタカラ,
-0x04F4,進めど地獄、退けど無間地獄……@n千棘の部屋からお宝ＤＶＤを取り戻せ！,
+0x04F0,オタカラ,《秘宝》
+0x04F4,進めど地獄、退けど無間地獄……@n千棘の部屋からお宝ＤＶＤを取り戻せ！,前进是地狱，后退是无间地狱……@n从千棘的房间夺回宝藏DVD！
 0x04F8,R_SneakMission051,
 0x04FC,R_SneakMission052,
 0x0500,R_SneakMission053,
@@ -90,8 +90,8 @@
 0x0514,R_SneakMission058,
 0x0518,R_SneakMission059,
 0x051C,R_SneakMission060,
-0x0520,ヤミイチ,
-0x0524,追跡せよ、集の闇市！！@n悪の園を暴き出せ！,
+0x0520,ヤミイチ,《黑市》
+0x0524,追跡せよ、集の闇市！！@n悪の園を暴き出せ！,追踪集的黑暗市场！！@n揭露邪恶的巢穴！
 0x0528,R_SneakMission061,
 0x052C,rof,
 0x0530,R_SneakMission062,
@@ -103,8 +103,8 @@
 0x0548,R_SneakMission068,
 0x054C,R_SneakMission069,
 0x0550,R_SneakMission070,
-0x0554,クダサイ,
-0x0558,メガネワールドに明日はない@n手段を問わず　メガネを手に入れろ！！,
+0x0554,クダサイ,《请给我》
+0x0558,メガネワールドに明日はない@n手段を問わず　メガネを手に入れろ！！,眼镜世界没有明天@n不择手段也要得到眼镜！！
 0x055C,R_SneakMission071,
 0x0560,R_SneakMission072,
 0x0564,R_SneakMission073,
@@ -117,8 +117,8 @@
 0x0580,R_SneakMission078,
 0x0584,R_SneakMission079,
 0x0588,R_SneakMission080,
-0x058C,スキデス,
-0x0590,一条楽への異常な愛情：なぜ彼は追い回されるのか@n追っ手を逃れて校門から落ち延びろ！,
+0x058C,スキデス,《喜欢你》
+0x0590,一条楽への異常な愛情：なぜ彼は追い回されるのか@n追っ手を逃れて校門から落ち延びろ！,对一条乐的异常爱恋：为何他会被穷追不舍@n甩开追兵从校门逃脱！
 0x0594,R_SneakMission081,
 0x0598,frm,
 0x059C,R_SneakMission082,
@@ -130,8 +130,8 @@
 0x05B4,R_SneakMission088,
 0x05B8,R_SneakMission089,
 0x05BC,R_SneakMission090,
-0x05C0,オマエガ,
-0x05C4,すべてはタイミングのせい……@n荒ぶる先輩たちから逃げ延びろ！！,
+0x05C0,オマエガ,《都是你》
+0x05C4,すべてはタイミングのせい……@n荒ぶる先輩たちから逃げ延びろ！！,一切都是时机的错……@n从狂暴的前辈们手中逃脱！！
 0x05C8,R_SneakMission091,
 0x05CC,R_SneakMission092,
 0x05D0,R_SneakMission093,
@@ -142,8 +142,8 @@
 0x05E4,R_SneakMission098,
 0x05E8,R_SneakMission099,
 0x05EC,R_SneakMission100,
-0x05F0,クンレン,
-0x05F4,地獄の猛特訓！！@nビーハイブの演習をくぐり抜けろ！！,
+0x05F0,クンレン,《训练》
+0x05F4,地獄の猛特訓！！@nビーハイブの演習をくぐり抜けろ！！,地狱般的魔鬼训练！！@n突破蜂巢的演习关卡！！
 0x05F8,R_SneakMission101,
 0x05FC,R_SneakMission102,
 0x0600,R_SneakMission103,
@@ -154,8 +154,8 @@
 0x0614,R_SneakMission108,
 0x0618,R_SneakMission109,
 0x061C,R_SneakMission110,
-0x0620,タイケツ,
-0x0624,行き過ぎた過保護@nしつこいクロードを出し抜け！！,
+0x0620,タイケツ,《对决》
+0x0624,行き過ぎた過保護@nしつこいクロードを出し抜け！！,过度的过度保护@n甩掉难缠的克劳德！！
 0x0628,R_SneakMission111,
 0x062C,R_SneakMission112,
 0x0630,R_SneakMission113,
@@ -166,8 +166,8 @@
 0x0644,R_SneakMission118,
 0x0648,R_SneakMission119,
 0x064C,R_SneakMission150,
-0x0650,フタタビ,
-0x0654,執念の対決再び@nクロード一味から華麗に逃げ切れ！！,
+0x0650,フタタビ,《再战》
+0x0654,執念の対決再び@nクロード一味から華麗に逃げ切れ！！,执念的对决再次上演@n从克劳德一伙人中华丽逃脱！！
 0x0658,R_SneakMission151,
 0x065C,R_SneakMission152,
 0x0660,R_SneakMission153,
