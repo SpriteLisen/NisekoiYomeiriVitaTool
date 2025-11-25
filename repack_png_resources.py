@@ -20,7 +20,8 @@ def convert_png_to_dds(png_file, output_dir):
         command.extend(
             [
                 r".\tools\texconv\texconv.exe",
-                "-f", "DXT3",
+                # "-f", "DXT3",
+                "-f", "DXT5",
                 "-ft", "dds",
                 "-o", output_dir,
                 "-y",
@@ -139,7 +140,8 @@ def process_png_files(input_dir, output_dir):
 def main():
     input_directory = "images/modified"
     # input_directory = "images/origin"
-    output_directory = "images/rebuild"
+    # output_directory = "images/rebuild"
+    output_directory = "game_data/all_extract"
 
     # 处理PNG文件
     process_png_files(input_directory, output_directory)
