@@ -2,9 +2,6 @@ import platform
 import subprocess
 from pathlib import Path
 
-prefix_gxt = ".gxt"
-prefix_dds = ".dds"
-
 
 def convert_png_to_dds(png_file, output_dir):
     """
@@ -42,16 +39,51 @@ def convert_png_to_dds(png_file, output_dir):
         print("stderr:", e.stderr)
         raise RuntimeError(f"Convert dds failed: {e} => {e.stderr}")
     except FileNotFoundError:
+        raise RuntimeError("Not find texconv.")
+
+
+def convert_png_to_tga(png_file, output_dir):
+    """
+    将 PNG 文件转换为 TAG 文件
+    """
+    try:
+        command = []
+        system = platform.system()
+
+        if system == "Darwin" or system == "Linux":
+            command.append("wine")
+
+        command.extend(
+            [
+                r".\tools\ImageMagick\magick.exe",
+                png_file,
+                f"{output_dir}/{png_file.stem}.tga"
+            ]
+        )
+
+        # 执行 texconv 转换命令
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            # text=True
+        )
+        print(f"Convert {png_file.name} to tga succeed!")
+    except subprocess.CalledProcessError as e:
+        print("stdout:", e.stdout)
+        print("stderr:", e.stderr)
+        raise RuntimeError(f"Convert tga failed: {e} => {e.stderr}")
+    except FileNotFoundError:
         raise RuntimeError("Not find ImageMagick.")
 
 
-def convert_dds_to_gxt(dds_file, output_dir):
+def convert_to_gxt(img_file, output_dir):
     """
-    将 DDS 文件转换为 GXT 文件
+    将文件转换为 GXT 文件
     """
     try:
         # 构建输出GXT文件路径
-        gxt_output_path = output_dir / f"{dds_file.stem}{prefix_gxt}"
+        gxt_output_path = output_dir / f"{img_file.stem}.gxt"
 
         command = []
         system = platform.system()
@@ -60,7 +92,7 @@ def convert_dds_to_gxt(dds_file, output_dir):
             command.append("wine")
 
         command.extend(
-            [r".\tools\psp2gxt\psp2gxt.exe", "-i", dds_file, "-o", str(gxt_output_path)]
+            [r".\tools\psp2gxt\psp2gxt.exe", "-i", img_file, "-o", str(gxt_output_path)]
         )
 
         # 执行 psp2gxt 转换命令
@@ -70,7 +102,7 @@ def convert_dds_to_gxt(dds_file, output_dir):
             capture_output=True,
             # text=True
         )
-        print(f"Convert {dds_file.name} to gxt succeed!")
+        print(f"Convert {img_file.name} to gxt succeed!")
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Convert gxt failed: {e} => {e.stderr}")
     except FileNotFoundError:
@@ -95,45 +127,53 @@ def process_png_files(input_dir, output_dir):
         return
 
     print(f"找到 {len(png_files)} 个PNG文件")
-    print("-" * 80 + "开始转换DDS" + "-" * 80)
+    print("-" * 80 + "开始转换" + "-" * 80)
 
-    # 临时DDS目录
-    temp_dds_dir = output_path / "temp_dds"
-    temp_dds_dir.mkdir(exist_ok=True)
+    # 临时目录
+    temp_img_dir = output_path / "temp_img"
+    temp_img_dir.mkdir(exist_ok=True)
 
-    # 第一步：将所有PNG转换为DDS
+    # 第一步：将所有PNG转换为DDS/TGA
     for png_file in png_files:
         # 计算相对路径，用于保持目录结构
         relative_path = png_file.relative_to(input_path)
-        dds_subdir = temp_dds_dir / relative_path.parent
+        tmp_img_subdir = temp_img_dir / relative_path.parent
 
-        # 创建对应的DDS输出目录
-        dds_subdir.mkdir(parents=True, exist_ok=True)
+        # 创建对应的输出目录
+        tmp_img_subdir.mkdir(parents=True, exist_ok=True)
 
         print(f"处理: {relative_path}")
-        convert_png_to_dds(png_file, dds_subdir)
+
+        # 字形图做 dds, 内存小很多
+        if png_file.name == 'font_j24x24_0.png':
+            convert_png_to_dds(png_file, tmp_img_subdir)
+        else:
+            convert_png_to_tga(png_file, tmp_img_subdir)
 
     print()
     print("-" * 80 + "开始编译GXT产品" + "-" * 80)
 
-    # 第二步：将所有 DDS 转换为 GXT
-    dds_files = sorted(temp_dds_dir.rglob("*.[Dd][Dd][Ss]"), key=lambda x: x.name.lower())
+    # 第二步：将所有 DDS/TGA 转换为 GXT
+    img_files = sorted(
+        [f for f in temp_img_dir.rglob('*') if f.suffix.lower() in ['.dds', '.tga']],
+        key=lambda x: x.name.lower()
+    )
 
-    for dds_file in dds_files:
+    for img_file in img_files:
         # 计算相对路径
-        relative_path = dds_file.relative_to(temp_dds_dir)
+        relative_path = img_file.relative_to(temp_img_dir)
         gxt_subdir = output_path / relative_path.parent
 
         # 创建对应的GXT输出目录
         gxt_subdir.mkdir(parents=True, exist_ok=True)
 
         print(f"处理: {relative_path}")
-        convert_dds_to_gxt(dds_file, gxt_subdir)
+        convert_to_gxt(img_file, gxt_subdir)
 
-    # 清理临时DDS文件（可选）
-    print("\n清理临时DDS文件...")
+    # 清理临时文件
+    print("\n清理临时文件...")
     import shutil
-    shutil.rmtree(temp_dds_dir)
+    shutil.rmtree(temp_img_dir)
     print("转换完成！")
 
 
