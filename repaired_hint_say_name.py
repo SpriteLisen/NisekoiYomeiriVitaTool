@@ -15,6 +15,10 @@ REPLACEMENT_RULES = {
     "@say 【集】": "@say 【舞子 集】",
     "@say 【阿德鲁特】": "@say 【千棘的父亲】",
     "@say 【华】": "@say 【桐崎 华】",
+    "@say 【桐崎 华】": "@say 【桐崎 美棘】",
+    "@say 【桐崎华】": "@say 【桐崎 美棘】",
+    "@say 【乐＆华】": "@say 【乐＆美棘】",
+    "@say 【千棘＆华】": "@say 【千棘＆美棘】",
 }
 
 CODE_REPLACEMENT_RULES = {

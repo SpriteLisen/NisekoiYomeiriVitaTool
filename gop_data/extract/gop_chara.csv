@@ -64,8 +64,8 @@
 0x03DC,万里花の父,万里花的父亲
 0x03E0,mrp,
 0x03E4,R_CharaMitoge,
-0x03E8,桐崎 美棘,桐崎 华
-0x03EC,美棘,华
+0x03E8,桐崎 美棘,桐崎 美棘
+0x03EC,美棘,美棘
 0x03F0,mtg,
 0x03F4,R_CharaSeishirou1,
 0x03F8,鶫 誠士郎　,鸫 诚士郎
@@ -375,13 +375,13 @@
 0x08B8,楽＆万里花,乐＆万里花
 0x08BC,rak_mrk,
 0x08C0,R_CharaRaku_Mitoge,
-0x08C4,楽＆美棘,乐＆华
+0x08C4,楽＆美棘,乐＆美棘
 0x08C8,rak_mtg,
 0x08CC,R_CharaChitoge_Marika,
 0x08D0,千棘＆万里花,千棘＆万里花
 0x08D4,ctg_mrk,
 0x08D8,R_CharaChitoge_Mitoge,
-0x08DC,千棘＆美棘,千棘＆华
+0x08DC,千棘＆美棘,千棘＆美棘
 0x08E0,ctg_mtg,
 0x08E4,R_CharaChitoge_Kosaki,
 0x08E8,千棘＆小咲,千棘＆小咲
