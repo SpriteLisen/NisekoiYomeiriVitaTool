@@ -32,10 +32,13 @@ class Anagram:
 
         self.strAnswerIdx = []
         self.strAnswer = []
+        self.answerLength = 0
         for i in range(5):
             idx = self.read4_int()
             self.strAnswerIdx.append(idx)
-            self.strAnswer.append('' if idx == 0 else str_table[str(idx)])
+            answer = '' if idx == 0 else str_table[str(idx)]
+            self.answerLength = max(len(answer), self.answerLength)
+            self.strAnswer.append(answer)
 
         self.charText = []
         for i in range(15):
@@ -51,7 +54,7 @@ class Anagram:
         result += f'iLimitMSec: {self.iLimitMSec}\n\n'
         result += f'strTitle: \n\t{self.strTitle}\n'
 
-        result += "\nAnswer:\n"
+        result += f"\nAnswer: [{self.answerLength}]\n"
         for answer in self.strAnswer:
             if answer:
                 result += f'\t{answer}\n'
