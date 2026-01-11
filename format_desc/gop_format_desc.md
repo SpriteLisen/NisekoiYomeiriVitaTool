@@ -25,7 +25,7 @@
 
 -------------------------
 
-## GOP GREC【GOP RECord structure】(alignment 16 bytes)
+## GOP GREC【GOP RECord structure】(alignment to 16-byte)
 
 ### GOP GREC Header
 
@@ -55,7 +55,7 @@ Each entry is described using 12 bytes.
 
 -------------------------
 
-## GENESTRT【GOP String】(alignment 16 bytes)
+## GENESTRT【GOP String】(alignment to 16-byte)
 
 ### GENESTRT Header
 
@@ -74,7 +74,7 @@ Each entry is described using 12 bytes.
 |         0x18          |                 0x04             |       B0 03 00 00      |         944 bytes          |                                                                                        [index - str point] table area size, start from 0x10~str area start                                                                                         |
 |         0x1C          |                 0x04             |       70 0E 00 00      |         3696 bytes          |                                                                                        content data size, start from 0x10~end                                                                                         |
 
-### GENESTRT index - str point table area (alignment 16 bytes)
+### GENESTRT index - str point table area (alignment to 16-byte)
 
 |      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |                                                                                                                                                      Notes                                                                                                                                                      |
 |:---------------------:|:------------------------------------:|:--------------:|:------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -87,3 +87,72 @@ Each entry is described using 12 bytes.
 |         string area start          |                string area size              |       ...      |         ...          |                                                                                        string content, start with 0x00, end with 0x00 per string.                                                                                        |
 
 -----------------
+
+## GOP GDAT【GOP Data】(alignment to 16-byte)
+
+### GOP GDAT Header
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |                                                                                                                                                      Notes                                                                                                                                                      |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|         0x00          |                 0x08                 |  47 4F 50 20 47 44 41 54   |       GOP GDAT           |                                                                                                                                                      Magic                                                                                                                                                      |
+|         0x08          |                 0x04                 |       40 05 00 00       |         1344 bytes          |                                                                                        content data size, start from 0x10~end                                                                                         |
+|         0x0C          |                 0x04                 |       00 00 00 00       |        - - -         |                                                                                        Unknown, always 0                                                                                         |
+|         0x10          |                 0x04                 |       D8 00 00 00       |        216 bytes         |                                                                                        entry value size                                                                                         |
+|         0x14          |                 0x04                 |       19 00 00 00       |        25 entry         |                                                                                        entry count                                                                                         |
+|         0x18          |                 0x04                 |       10 00 00 00       |        - - -         |                                                                                        version, always 0x10                                                                                        |
+|         0x1C          |                 0x04                 |       80 00 00 00       |        128 byte         |                                                                                        data start offset                                                                                        |
+
+### GOP GDAT entry id area (Maybe? alignment to 16-byte)
+
+```shell
+Each id is described using 4 bytes.
+
+Sometimes it is self-incremental, sometimes it is not, depending on the specific gop file type
+```
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |     Notes   |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:-----------:|
+|         0x20          |                 0x04                 |  00 00 00 00   |       0           |     entry 1 id   |
+|         0x24          |                 0x04                 |  01 00 00 00   |       1           |     entry 2 id   |
+|         0x28          |                 0x04                 |  02 00 00 00   |       2           |     entry 3 id   |
+|         ...          |                 ...                 |  ...   |       ...           |     ...   |
+
+### GOP GDAT value area
+
+```shell
+Start offset from 0x1C value. this case is 0x80.
+The field size from GOP GREC Header 0x10 value, this case is 0x36.
+
+The data is described per field value using 4-bytes.
+
+The value of int32 is just a value.
+The value of a string is the pointer offset of the GENESTRT string area.
+Other field type require reverse analysis.
+```
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |     Notes   |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:-----------:|
+|         0x80          |                 0x04                 |  18 00 00 00   |       24           |     entry 1 field 1 value   |
+|         0x84          |                 0x00                 |  00 00 00 00   |       0           |     entry 1 field 2 value   |
+|         0x88          |                 0x00                 |  00 00 00 00   |       0           |     entry 1 field 3 value   |
+|         ...          |                 ...                 |  ...   |       ...           |     ...   |
+
+### GOP GDAT extend value area (24 bytes follow value area)
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |     Notes   |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:-----------:|
+|         +0x00          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+|         +0x04          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+|         +0x08          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+|         +0x0C          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+|         +0x10          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+|         +0x14          |                 0x04                 |  00 00 00 00   |       - - -           |     Unknown   |
+
+-------------------------
+
+## GOP GFIN (16 bytes)
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |                                                                                                                                                      Notes                                                                                                                                                      |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|         0x00          |                 0x08                 |  47 45 4E 45 45 4F 46 20   |       'GENEEOF '           |                                                                                                                                                      Magic                                                                                                                                                      |
+|         0x08          |                 0x08                 |  00 00 00 00 00 00 00 00   |         - - -          |                                                                                        always 00 00 00 00 00 00 00 00.                                                                                         |

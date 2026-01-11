@@ -195,8 +195,8 @@ if __name__ == "__main__":
         game_count = get4_bytes(gdata_bytes, 0x14)
         print(f"game_count: {game_count}")
 
-        cols = get4_bytes(gdata_bytes, 0x18)
-        print(f"cols: {cols}")
+        version = get4_bytes(gdata_bytes, 0x18)
+        print(f"version: {version}")
 
         data_pos = get4_bytes(gdata_bytes, 0x1C)
         print(f"data_pos: {data_pos}")
