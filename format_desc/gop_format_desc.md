@@ -25,7 +25,37 @@
 
 -------------------------
 
-## GENESTRT (alignment 16 bytes)
+## GOP GREC【GOP RECord structure】(alignment 16 bytes)
+
+### GOP GREC Header
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |                                                                                                                                                      Notes                                                                                                                                                      |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|         0x00          |                 0x08                 |  47 4F 50 20 47 52 45 43   |       GOP GREC           |                                                                                                                                                      Magic                                                                                                                                                      |
+|         0x08          |                 0x04                 |       90 02 00 00       |         656 bytes          |                                                                                        content data size, start from 0x10~end                                                                                         |
+|         0x0C          |                 0x04                 |       00 00 00 00       |        - - -         |                                                                                        Unknown, always 0                                                                                         |
+|         0x10          |                 0x04                 |       36 00 00 00       |        54 entry         |                                                                                        Entry count                                                                                         |
+
+### GOP GREC content area
+
+```shell
+Each entry is described using 12 bytes.
+
+4 byte described field type. (Such as 0x0E, 0x05, 0x0F, and more)
+4 byte described field offset. (4-byte increment)
+4 byte described field id. (increment)
+```
+
+|      Offset (h)       |               Size (h)               |  Example (h)   | Value (conversion) |                                                                                                                                                      Notes                                                                                                                                                      |
+|:---------------------:|:------------------------------------:|:--------------:|:------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|         0x14          |                0x04              |       0E 00 00 00      |         ...          |                                                                                        Field1 type, 0x0E is SelfId, 0x05 is int32, 0x0F is string, Other type require reverse analysis.                                                                                        |
+|         0x18          |                0x04              |       00 00 00 00      |         ...          |                                                                                        Field1 offset, 4-byte increment.                                                                                        |
+|         0x1C          |                0x04              |       01 00 00 00      |         ...          |                                                                                        Field1 id, increment.                                                                                        |
+|         ...          |                ...              |       ...      |         ...          |                                                                                        ...                                                                                        |
+
+-------------------------
+
+## GENESTRT【GOP String】(alignment 16 bytes)
 
 ### GENESTRT Header
 
