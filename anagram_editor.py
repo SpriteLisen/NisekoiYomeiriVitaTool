@@ -115,10 +115,9 @@ class AnagramEditorApp:
     def create_title_edit_area(self, parent_frame):
         """创建左上角的纯色图片和文本输入框"""
         top_img = Image.new('RGB', (406, 52), color='white')
-
         self.top_photo = ImageTk.PhotoImage(top_img)
 
-        # 2. 在Canvas上显示这张图片
+        # 在Canvas上显示这张图片
         self.top_canvas = tk.Canvas(
             parent_frame,
             width=406,
@@ -131,16 +130,9 @@ class AnagramEditorApp:
 
         self.top_canvas.create_image(0, 0, anchor=tk.NW, image=self.top_photo)
 
-        # 在图片的水平居中位置，距离左侧30，创建文本输入框
-        # 计算文本框的位置
-        text_x = 30  # 距离左侧30
-        text_y = 26  # 垂直居中（52/2）
-
-        # self.create_title_textbox(text_x, text_y)
-
         # 如果还没有保存的文本，使用默认值
         if not hasattr(self, 'saved_text'):
-            self.saved_text = "双击编辑文本"
+            self.saved_text = "点击编辑标题"
 
         # 创建显示文本的Label（非编辑状态）
         self.text_display = tk.Label(
@@ -150,109 +142,140 @@ class AnagramEditorApp:
             bg='white',
             fg='black',
             padx=10,
-            cursor='xterm'
+            cursor='hand2'  # 改为手型光标，表示可点击
         )
 
         # 将Label放置在Canvas上
-        self.top_canvas.create_window(text_x, text_y, anchor=tk.W, window=self.text_display)
+        self.top_canvas.create_window(30, 26, anchor=tk.W, window=self.text_display)
 
-        # 绑定双击事件
-        self.text_display.bind('<Double-Button-1>', self.on_title_text_double_click)
+        # 绑定单击事件（改为弹窗编辑）
+        self.text_display.bind('<Button-1>', self.show_title_edit_dialog)
 
-    def create_title_textbox(self, x, y):
-        """创建自定义文本框（双击编辑，回车保存）"""
-        # 如果还没有保存的文本，使用默认值
-        if not hasattr(self, 'saved_text'):
-            self.saved_text = "双击编辑文本"
+    def show_title_edit_dialog(self, event=None):
+        """显示标题编辑对话框"""
+        # 创建顶层窗口
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("编辑标题")
+        edit_window.geometry("320x140")
+        edit_window.resizable(False, False)
 
-        # 创建显示文本的Label（非编辑状态）
-        self.text_display = tk.Label(
-            self.top_canvas,
-            text=self.saved_text,  # 显示已保存的文本
-            font=('微软雅黑', 14),
-            bg='white',
-            fg='black',
-            padx=10,
-            cursor='xterm'
-        )
+        # 设置为模态窗口
+        edit_window.transient(self.root)
+        edit_window.grab_set()
+        edit_window.attributes('-topmost', True)
 
-        # 将Label放置在Canvas上
-        self.top_canvas.create_window(x, y, anchor=tk.W, window=self.text_display)
+        # 绑定焦点事件，确保弹窗获得焦点
+        def on_focus_out(e):
+            if edit_window.winfo_exists():
+                edit_window.focus_force()
 
-        # 绑定双击事件
-        self.text_display.bind('<Double-Button-1>', self.on_title_text_double_click)
+        edit_window.bind('<FocusOut>', on_focus_out)
+        edit_window.bind('<Escape>', lambda e: edit_window.destroy())
 
-    def on_title_text_double_click(self, event):
-        """双击文本进入编辑模式"""
-        # 销毁Label
-        self.text_display.destroy()
+        # 居中显示
+        edit_window.update_idletasks()
+        width = edit_window.winfo_width()
+        height = edit_window.winfo_height()
+        x = (edit_window.winfo_screenwidth() // 2) - (width // 2)
+        y = (edit_window.winfo_screenheight() // 2) - (height // 2)
+        edit_window.geometry(f'{width}x{height}+{x}+{y}')
 
-        # 创建Entry控件用于编辑
-        self.text_entry = tk.Entry(
-            self.top_canvas,
+        # 确保弹窗获得焦点
+        edit_window.focus_force()
+
+        # 创建编辑框和提示标签
+        tk.Label(edit_window, text="编辑标题（最多16个字符）:",
+                 font=(AnagramEditorApp.FONT_FAMILY, 11)).pack(pady=10)
+
+        # 创建Entry控件
+        entry_var = tk.StringVar(value=self.saved_text)
+
+        # 文本变化回调函数（限制16个字符）
+        def on_text_change(*args):
+            text = entry_var.get()
+            if len(text) > 16:
+                entry_var.set(text[:16])
+
+        # 绑定文本变化事件
+        entry_var.trace('w', on_text_change)
+
+        entry = tk.Entry(
+            edit_window,
+            textvariable=entry_var,
             font=(AnagramEditorApp.FONT_FAMILY, 14),
-            bg='white',
-            fg='black',
-            insertbackground='black',
-            width=16,
-            justify='left',
-            relief='flat',
-            highlightthickness=1,
-            highlightcolor='#3498db',
-            highlightbackground='#bdc3c7'
+            width=25
         )
+        entry.pack(pady=5)
 
-        # 设置文本为已保存的文本
-        self.text_entry.insert(0, self.saved_text)
+        # 确保Entry获得焦点
+        def set_entry_focus():
+            if edit_window.winfo_exists():
+                entry.focus_set()
+                entry.select_range(0, tk.END)
 
-        # 将Entry放置在Canvas上
-        self.top_canvas.create_window(30, 26, anchor=tk.W, window=self.text_entry)
+        edit_window.after(10, set_entry_focus)
 
-        # 设置焦点并全选文本
-        self.text_entry.focus_set()
-        self.text_entry.select_range(0, tk.END)
+        # 按钮框架
+        button_frame = tk.Frame(edit_window)
+        button_frame.pack(pady=10)
 
-        # 绑定回车键事件（保存）
-        self.text_entry.bind('<Return>', self.on_title_text_save)
+        def save_title():
+            """保存标题"""
+            new_text = entry_var.get().strip()
 
-        # 绑定失去焦点事件（也保存）
-        self.text_entry.bind('<FocusOut>', self.on_title_text_save)
+            # 如果没有输入任何内容，保持原样
+            if not new_text:
+                edit_window.destroy()
+                return
 
-        # 绑定ESC键（取消编辑）
-        self.text_entry.bind('<Escape>', self.on_title_text_cancel)
+            # 如果和原文本相同，不更新
+            if new_text == self.saved_text:
+                print("标题未更改")
+                edit_window.destroy()
+                return
 
-    def on_title_text_save(self, event):
-        """保存文本并退出编辑模式"""
-        new_text = self.text_entry.get().strip()
+            # 确保不超过16个字符（再次检查）
+            if len(new_text) > 16:
+                new_text = new_text[:16]
+                print(f"标题超过16个字符，已截断为: '{new_text}'")
 
-        # 如果输入为空，走取消逻辑（恢复原文本）
-        if not new_text:
-            self.on_title_text_cancel(event)
-            return
+            # 更新已保存的文本
+            self.saved_text = new_text
 
-        # 限制最多16个字符
-        if len(new_text) > 16:
-            new_text = new_text[:16]
+            # 更新显示的文本
+            self.text_display.config(text=self.saved_text)
 
-        # 更新已保存的文本
-        self.saved_text = new_text
+            print(f"标题已修改为: '{self.saved_text}'")
+            edit_window.destroy()
 
-        # 打印修改后的值
-        print(f"文本已保存为: '{self.saved_text}'")
+        def cancel_edit():
+            """取消编辑"""
+            edit_window.destroy()
 
-        # 销毁Entry
-        self.text_entry.destroy()
+        # 保存按钮
+        save_btn = tk.Button(
+            button_frame,
+            text="保存",
+            command=save_title,
+            width=10
+        )
+        save_btn.pack(side=tk.LEFT, padx=5)
 
-        # 重新创建显示Label，显示新保存的文本
-        self.create_title_textbox(30, 26)
+        # 取消按钮
+        cancel_btn = tk.Button(
+            button_frame,
+            text="取消",
+            command=cancel_edit,
+            width=10
+        )
+        cancel_btn.pack(side=tk.LEFT, padx=5)
 
-    def on_title_text_cancel(self, event):
-        """取消编辑，恢复到上一次保存的文本"""
-        # 销毁Entry
-        self.text_entry.destroy()
+        # 绑定回车键
+        entry.bind('<Return>', lambda e: save_title())
+        edit_window.bind('<Escape>', lambda e: cancel_edit())
 
-        # 重新创建显示Label，显示上一次保存的文本（saved_text）
-        self.create_title_textbox(30, 26)
+        # 初始时调用一次
+        on_text_change()
 
     def create_right_panel(self):
         # 右侧框架
@@ -302,7 +325,7 @@ class AnagramEditorApp:
         answer_title = tk.Label(
             parent_frame,
             text="答案列表",
-            font=(AnagramEditorApp.FONT_FAMILY, 12, 'bold'),
+            font=(AnagramEditorApp.FONT_FAMILY, 15, 'bold'),
             bg=AnagramEditorApp.PANEL_BG_COLOR,
             fg='#2c3e50',
             pady=5
@@ -322,7 +345,7 @@ class AnagramEditorApp:
         self.answer_listbox = tk.Listbox(
             answer_container,
             # yscrollcommand=answer_scrollbar.set,
-            font=(AnagramEditorApp.FONT_FAMILY, 14),
+            font=(AnagramEditorApp.FONT_FAMILY, 13),
             bg='white',
             fg='black',
             relief=tk.FLAT,
@@ -374,6 +397,9 @@ class AnagramEditorApp:
         edit_window.resizable(False, False)
         edit_window.transient(self.root)  # 设置为主窗口的子窗口
         edit_window.grab_set()  # 模态窗口
+
+        # 设置为始终在最顶层
+        edit_window.attributes('-topmost', True)
 
         # 居中显示
         edit_window.update_idletasks()
