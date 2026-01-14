@@ -14,7 +14,11 @@ def get4_bytes(data, start):
 
 
 class Anagram:
+    MAX_CHAR_SIZE = 15
+
     class CharText:
+        DEFAULT_CHAR = "字"
+
         def read4_int(self):
             return int.from_bytes(self.data.read(0x04), order)
 
@@ -536,6 +540,12 @@ class ImageActionPanel:
             command=self.on_delete_char
         )
 
+        self.add_char_menu = tk.Menu(self.root_window, tearoff=0)
+        self.add_char_menu.add_command(
+            label="增加字符",
+            command=self.on_add_char
+        )
+
         self.image_label.bind('<Button-1>', self.on_main_img_click)
         self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
         self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
@@ -604,6 +614,14 @@ class ImageActionPanel:
         else:
             self.right_click_index = -1
 
+            if (ImageActionPanel.min_x - ImageActionPanel.char_bg_half_width <= x
+                    <= ImageActionPanel.max_x + ImageActionPanel.char_bg_half_width
+                    and ImageActionPanel.min_y - ImageActionPanel.char_bg_half_width <= y
+                    <= ImageActionPanel.max_y + ImageActionPanel.char_bg_half_width):
+                self.right_click_x = x + ImageActionPanel.char_bg_half_width
+                self.right_click_y = y + ImageActionPanel.char_bg_half_width
+                self.add_char_menu.post(event.x_root, event.y_root)
+
     def on_delete_char(self):
         if self.right_click_index >= 0:
             answer_length = len(game_anagram[now_edit_index].strAnswer[0])
@@ -636,6 +654,30 @@ class ImageActionPanel:
             self.redraw()
 
             self.right_click_index = -1
+
+    def on_add_char(self):
+        char_count = 0
+        for char in game_anagram[now_edit_index].charText:
+            if not char.is_empty():
+                char_count += 1
+
+        if char_count >= Anagram.MAX_CHAR_SIZE:
+            hint = "新增失败！\n最多增加十五个字符"
+            app_log(hint)
+            AlertDialog(
+                self.root_window,
+                hint=hint
+            )
+            return
+
+        char_entry = game_anagram[now_edit_index].charText[char_count]
+        char_entry.iPosX = self.right_click_x
+        char_entry.iPosY = self.right_click_y
+        char_entry.strText = Anagram.CharText.DEFAULT_CHAR
+
+        app_log(f'已新增字谜 {now_edit_index + 1:02d} 的备选字 => {Anagram.CharText.DEFAULT_CHAR}')
+
+        self.redraw()
 
     def show_title_edit_dialog(self):
         def on_text_changed(new_text):
