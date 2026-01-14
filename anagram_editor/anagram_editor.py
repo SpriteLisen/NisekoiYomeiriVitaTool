@@ -438,41 +438,65 @@ class ImageActionPanel:
 
     char_bg_half_width = 45
 
+    min_x = 45
+    min_y = 100
+    max_x = 915
+    max_y = 495
+
+    class BubbleEntry:
+        def __init__(self, x, y):
+            self.min_x = x
+            self.max_x = x + ImageActionPanel.char_bg_half_width * 2
+            self.min_y = y
+            self.max_y = y + ImageActionPanel.char_bg_half_width * 2
+
+        def is_hit(self, x, y):
+            return self.min_x <= x <= self.max_x and self.min_y <= y <= self.max_y
+
     def create_main_area(self):
         bg_img = Image.open(self.bg_img_path).convert("RGBA")
+
+        main_img = Image.new("RGBA", bg_img.size, (0, 0, 0, 0))
+
+        main_img.paste(bg_img, (0, 0))
+
         title_bg_img = Image.open(self.title_bg_img_path).convert("RGBA")
-        char_bg_img = Image.open(self.char_bg_img_path).convert("RGBA")
-
-        overlay = Image.new("RGBA", bg_img.size, (0, 0, 0, 0))
-        overlay.paste(title_bg_img, (0, 15))
-
-        if game_anagram:
-            for char_entry in game_anagram[now_edit_index].charText:
-                if not char_entry.is_empty():
-                    overlay.paste(
-                        char_bg_img,
-                        (char_entry.iPosX - self.char_bg_half_width, char_entry.iPosY - self.char_bg_half_width),
-                    )
-
-        main_img = Image.alpha_composite(bg_img, overlay)
+        main_img.paste(title_bg_img, (0, 15), title_bg_img)
 
         main_draw = ImageDraw.Draw(main_img)
 
         font = ImageFont.truetype(f"{self.resource_dir}WenQuanDengKuanWeiMiHei.ttf", 18)
-
         text_x = 30
         text_y = 44
-
         main_draw.text((text_x, text_y), self.title_text, fill='black', font=font, anchor='lm')
+
+        char_bg_img = Image.open(self.char_bg_img_path).convert("RGBA")
+        self.bubble_entry = []
 
         if game_anagram:
             char_font = ImageFont.truetype(f"{self.resource_dir}WenQuanDengKuanWeiMiHei.ttf", 38)
+
             for char_entry in game_anagram[now_edit_index].charText:
                 if not char_entry.is_empty():
+                    show_x = char_entry.iPosX - self.char_bg_half_width
+                    show_y = char_entry.iPosY - self.char_bg_half_width
+
+                    self.bubble_entry.append(
+                        ImageActionPanel.BubbleEntry(show_x, show_y)
+                    )
+
+                    main_img.paste(
+                        char_bg_img,
+                        (show_x, show_y),
+                        char_bg_img
+                    )
+
                     char_x = char_entry.iPosX
                     char_y = char_entry.iPosY
-
-                    main_draw.text((char_x, char_y), char_entry.strText, fill='#555555', font=char_font, anchor='mm')
+                    main_draw.text(
+                        (char_x, char_y), char_entry.strText,
+                        fill='#555555', font=char_font, anchor='mm'
+                    )
 
         self.main_img = ImageTk.PhotoImage(main_img)
 
@@ -501,6 +525,8 @@ class ImageActionPanel:
         self.image_label.pack(fill=tk.BOTH, expand=True)
 
         self.image_label.bind('<Button-1>', self.on_main_img_click)
+        self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
+        self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
 
     def refresh_now_anagram_ui(self):
         self.title_text = game_anagram[now_edit_index].strTitle
@@ -513,6 +539,42 @@ class ImageActionPanel:
         # 点击标题区域
         if 0 <= x <= 400 and 18 <= y <= 68:
             self.show_title_edit_dialog()
+        else:
+            for i in range(len(self.bubble_entry)):
+                if self.bubble_entry[i].is_hit(x, y):
+                    self.dragging = True
+                    self.dragging_index = i
+                    self.dragging_entry = self.bubble_entry[i]
+                    self.drag_start_x = x
+                    self.drag_start_y = y
+
+    def on_mouse_drag(self, event):
+        if self.dragging and self.dragging_entry:
+            offset_x = self.drag_start_x - event.x
+            offset_y = self.drag_start_y - event.y
+
+            dragging_item = game_anagram[now_edit_index].charText[self.dragging_index]
+
+            new_x = dragging_item.iPosX - offset_x
+            new_y = dragging_item.iPosY - offset_y
+
+            new_x = max(ImageActionPanel.min_x, min(new_x, ImageActionPanel.max_x))
+            new_y = max(ImageActionPanel.min_y, min(new_y, ImageActionPanel.max_y))
+
+            dragging_item.iPosX = new_x
+            dragging_item.iPosY = new_y
+
+            self.drag_start_x = dragging_item.iPosX
+            self.drag_start_y = dragging_item.iPosY
+
+            self.redraw()
+
+    def on_mouse_up(self, event):
+        self.dragging = False
+        self.dragging_index = None
+        self.dragging_entry = None
+        self.drag_start_x = None
+        self.drag_start_y = None
 
     def show_title_edit_dialog(self):
         def on_text_changed(new_text):
