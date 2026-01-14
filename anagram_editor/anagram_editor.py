@@ -26,6 +26,9 @@ class Anagram:
             self.strTextIdx = self.read4_int()
             self.strText = '' if self.strTextIdx == 0 else str_table[str(self.strTextIdx)]
 
+        def is_empty(self):
+            return self.iPosX == 0 and self.iPosY == 0 and self.strText == '' and self.strTextIdx == 0
+
     def __init__(self, data, str_table):
         self.data = BytesIO(data)
 
@@ -46,7 +49,7 @@ class Anagram:
             self.answerLength = max(len(answer), self.answerLength)
             self.strAnswer.append(answer)
 
-        self.charText = []
+        self.charText: list[Anagram.CharText] = []
         for i in range(15):
             self.charText.append(Anagram.CharText(self.data, str_table))
 
@@ -431,12 +434,26 @@ class ImageActionPanel:
     resource_dir = "resources/"
     bg_img_path = f"{resource_dir}bg.png"
     title_bg_img_path = f"{resource_dir}title_area_bg.png"
+    char_bg_img_path = f"{resource_dir}char_bg.png"
+
+    char_bg_half_width = 45
 
     def create_main_area(self):
         bg_img = Image.open(self.bg_img_path).convert("RGBA")
         title_bg_img = Image.open(self.title_bg_img_path).convert("RGBA")
+        char_bg_img = Image.open(self.char_bg_img_path).convert("RGBA")
+
         overlay = Image.new("RGBA", bg_img.size, (0, 0, 0, 0))
         overlay.paste(title_bg_img, (0, 15))
+
+        if game_anagram:
+            for char_entry in game_anagram[now_edit_index].charText:
+                if not char_entry.is_empty():
+                    overlay.paste(
+                        char_bg_img,
+                        (char_entry.iPosX - self.char_bg_half_width, char_entry.iPosY - self.char_bg_half_width),
+                    )
+
         main_img = Image.alpha_composite(bg_img, overlay)
 
         main_draw = ImageDraw.Draw(main_img)
@@ -447,6 +464,15 @@ class ImageActionPanel:
         text_y = 44
 
         main_draw.text((text_x, text_y), self.title_text, fill='black', font=font, anchor='lm')
+
+        if game_anagram:
+            char_font = ImageFont.truetype(f"{self.resource_dir}WenQuanDengKuanWeiMiHei.ttf", 38)
+            for char_entry in game_anagram[now_edit_index].charText:
+                if not char_entry.is_empty():
+                    char_x = char_entry.iPosX
+                    char_y = char_entry.iPosY
+
+                    main_draw.text((char_x, char_y), char_entry.strText, fill='#555555', font=char_font, anchor='mm')
 
         self.main_img = ImageTk.PhotoImage(main_img)
 
