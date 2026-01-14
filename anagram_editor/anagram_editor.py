@@ -18,13 +18,19 @@ class Anagram:
         def read4_int(self):
             return int.from_bytes(self.data.read(0x04), order)
 
-        def __init__(self, data, str_table):
-            self.data = data
+        def __init__(self, data=None, str_table=None):
+            if not data and not str_table:
+                self.iPosX = 0
+                self.iPosY = 0
+                self.strTextIdx = 0
+                self.strText = ''
+            else:
+                self.data = data
 
-            self.iPosX = self.read4_int()
-            self.iPosY = self.read4_int()
-            self.strTextIdx = self.read4_int()
-            self.strText = '' if self.strTextIdx == 0 else str_table[str(self.strTextIdx)]
+                self.iPosX = self.read4_int()
+                self.iPosY = self.read4_int()
+                self.strTextIdx = self.read4_int()
+                self.strText = '' if self.strTextIdx == 0 else str_table[str(self.strTextIdx)]
 
         def is_empty(self):
             return self.iPosX == 0 and self.iPosY == 0 and self.strText == '' and self.strTextIdx == 0
@@ -524,9 +530,16 @@ class ImageActionPanel:
         self.image_label = tk.Label(self.image_frame, image=self.main_img, bg='white')
         self.image_label.pack(fill=tk.BOTH, expand=True)
 
+        self.delete_char_menu = tk.Menu(self.root_window, tearoff=0)
+        self.delete_char_menu.add_command(
+            label="删除该字",
+            command=self.on_delete_char
+        )
+
         self.image_label.bind('<Button-1>', self.on_main_img_click)
         self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
         self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
+        self.image_label.bind('<Button-3>', self.on_right_click)
 
     def refresh_now_anagram_ui(self):
         self.title_text = game_anagram[now_edit_index].strTitle
@@ -575,6 +588,54 @@ class ImageActionPanel:
         self.dragging_entry = None
         self.drag_start_x = None
         self.drag_start_y = None
+
+    def on_right_click(self, event):
+        x, y = event.x, event.y
+
+        hit_index = -1
+        for i in range(len(self.bubble_entry)):
+            if self.bubble_entry[i].is_hit(x, y):
+                hit_index = i
+                break
+
+        if hit_index >= 0:
+            self.right_click_index = hit_index
+            self.delete_char_menu.post(event.x_root, event.y_root)
+        else:
+            self.right_click_index = -1
+
+    def on_delete_char(self):
+        if self.right_click_index >= 0:
+            answer_length = len(game_anagram[now_edit_index].strAnswer[0])
+            char_count = 0
+            for char in game_anagram[now_edit_index].charText:
+                if not char.is_empty():
+                    char_count += 1
+
+            if char_count <= answer_length:
+                hint = "删除失败！\n备选字符数不能少于答案的字数！"
+                app_log(hint)
+                AlertDialog(
+                    self.root_window,
+                    hint=hint
+                )
+                return
+
+            # 移除该字符, 将后面的字符前移
+            remove_char = game_anagram[now_edit_index].charText[self.right_click_index].strText
+            char_list = game_anagram[now_edit_index].charText
+            original_length = len(char_list)
+
+            for i in range(self.right_click_index, original_length - 1):
+                char_list[i] = char_list[i + 1]
+
+            char_list[original_length - 1] = Anagram.CharText()
+
+            app_log(f'已删除字谜 {now_edit_index + 1:02d} 的备选字 => {remove_char}')
+
+            self.redraw()
+
+            self.right_click_index = -1
 
     def show_title_edit_dialog(self):
         def on_text_changed(new_text):
