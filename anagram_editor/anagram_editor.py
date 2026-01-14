@@ -550,6 +550,7 @@ class ImageActionPanel:
         self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
         self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
         self.image_label.bind('<Button-3>', self.on_right_click)
+        self.image_label.bind('<Double-Button-1>', self.on_double_click)
 
     def refresh_now_anagram_ui(self):
         self.title_text = game_anagram[now_edit_index].strTitle
@@ -692,6 +693,30 @@ class ImageActionPanel:
             hint="编辑标题（最多16个字符）:",
             default_value=self.title_text,
             max_length=16,
+            on_text_changed=on_text_changed
+        )
+
+    def on_double_click(self, event):
+        x, y = event.x, event.y
+
+        for i in range(len(self.bubble_entry)):
+            if self.bubble_entry[i].is_hit(x, y):
+                self.show_char_edit_dialog(
+                    game_anagram[now_edit_index].charText[i]
+                )
+
+    def show_char_edit_dialog(self, bubble):
+        def on_text_changed(new_text):
+            app_log(f"已将字谜 {now_edit_index + 1:02d} 的备选字 [{bubble.strText}] 修改为 [{new_text}]")
+            bubble.strText = new_text
+            self.redraw()
+
+        EditTextDialog(
+            root_window=self.root_window,
+            title="编辑字符",
+            hint="编辑字符（最多1个字符）:",
+            default_value=bubble.strText,
+            max_length=1,
             on_text_changed=on_text_changed
         )
 
