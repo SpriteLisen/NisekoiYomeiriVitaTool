@@ -1,6 +1,11 @@
+import os
+import csv
+import platform
+import subprocess
 import tkinter as tk
 from io import BytesIO
 from tkinter import ttk
+from pathlib import Path
 from collections import OrderedDict
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
@@ -8,9 +13,26 @@ app_log = None
 
 order = "little"
 
+output_dir = "export/"
+
+output_file_name = "gop_talkanagram.gop"
+output_csv_name = "anagram.csv"
+output_file = output_dir + output_file_name
+output_csv_file = output_dir + output_csv_name
+
+Path(output_dir).mkdir(parents=True, exist_ok=True)
+
 
 def get4_bytes(data, start):
     return int.from_bytes(data[start: start + 0x04], order)
+
+
+def align_to_16_bytes(data):
+    remainder = len(data) % 16
+    if remainder != 0:
+        padding = 16 - remainder
+        data.extend(b'\x00' * padding)
+    return data
 
 
 class Anagram:
@@ -37,7 +59,7 @@ class Anagram:
                 self.strText = '' if self.strTextIdx == 0 else str_table[str(self.strTextIdx)]
 
         def is_empty(self):
-            return self.iPosX == 0 and self.iPosY == 0 and self.strText == '' and self.strTextIdx == 0
+            return self.iPosX == 0 and self.iPosY == 0 and self.strText == ''
 
     def __init__(self, data, str_table):
         self.data = BytesIO(data)
@@ -118,13 +140,21 @@ now_edit_index = 0
 
 game_anagram: list[Anagram] = []
 
+pre_data: bytearray = None
+gdata_bytes: bytearray = None
+str_area: StrArea = None
+
 
 def parse_meta_info():
     with open("resources/anagram.gop", "rb") as file:
         gop_data = file.read()
 
+        global pre_data
+        pre_data = gop_data[:gop_data.find(b"GENESTRT")]
+
         # GDAT area parse
         gdata_start_offset = gop_data.find(b"GOP GDAT")
+        global gdata_bytes
         gdata_bytes = gop_data[gdata_start_offset:]
 
         magic_size = 0x10
@@ -138,6 +168,8 @@ def parse_meta_info():
 
         # STR area
         str_area_data = gop_data[gop_data.find(b"GENESTRT"):gdata_start_offset]
+
+        global str_area
         str_area = StrArea(str_area_data)
 
         for i in range(game_count):
@@ -148,6 +180,147 @@ def parse_meta_info():
             game_anagram.append(anagram)
 
         app_log(f"解析字谜完成")
+
+    if os.path.exists(output_csv_file):
+        with open(output_csv_file, 'r', newline='', encoding='utf-8-sig') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+
+            for i, row in enumerate(csv_reader):
+                anagram_entry = game_anagram[i]
+                anagram_entry.SelfId = int(row['SelfId'])
+                anagram_entry.iQuestId = int(row['iQuestId'])
+                anagram_entry.iLimitMSec = int(row['iLimitMSec'])
+                anagram_entry.strTitle = row['strTitle']
+                if len(anagram_entry.strTitle) > 13:
+                    print(anagram_entry.strTitle)
+
+                for j in range(5):
+                    anagram_entry.strAnswer[j] = row[f"strAnswer{j:02d}"]
+
+                for j in range(15):
+                    char_entry = anagram_entry.charText[j]
+                    char_entry.iPosX = int(row[f"iPosX{j:02d}"])
+                    char_entry.iPosY = int(row[f"iPosY{j:02d}"])
+                    char_entry.strText = row[f"strText{j:02d}"]
+
+        app_log("已恢复上次编辑状态")
+
+
+def export_product(root_window):
+    csv_file = open(output_csv_file, 'w', newline='', encoding='utf-8-sig')
+    csv_writer = csv.writer(csv_file)
+
+    offset_data = []
+    string_data = b""
+
+    string_data += b'\x00'
+    offset_data.append(0)
+
+    # encode table header
+    csv_writer.writerow(str_area.str_table_title.values())
+    for v in str_area.str_table_title.values():
+        offset_data.append(len(string_data))
+        string_data += v.encode('utf-8') + b'\x00'
+
+    entry_bytes = bytearray()
+
+    # encode anagram data
+    for i in range(len(game_anagram)):
+        anagram_data_list = []
+
+        offset_data.append(len(string_data))
+        string_data += f"R_TalkAnagram{i:03d}".encode('utf-8') + b'\x00'
+
+        anagram_entry = game_anagram[i]
+
+        # SelfId, iQuestId, iLimitMSec
+        anagram_data_list.append(anagram_entry.SelfId)
+        anagram_data_list.append(anagram_entry.iQuestId)
+        anagram_data_list.append(anagram_entry.iLimitMSec)
+        entry_bytes.extend(anagram_entry.SelfId.to_bytes(4, order))
+        entry_bytes.extend(anagram_entry.iQuestId.to_bytes(4, order))
+        entry_bytes.extend(anagram_entry.iLimitMSec.to_bytes(4, order))
+
+        # Title
+        anagram_entry.strTitleIdx = len(offset_data)
+        entry_bytes.extend(anagram_entry.strTitleIdx.to_bytes(4, order))
+        offset_data.append(len(string_data))
+        string_data += anagram_entry.strTitle.encode('utf-8') + b'\x00'
+        anagram_data_list.append(anagram_entry.strTitle)
+
+        # 5 answer
+        for j in range(5):
+            answer_str = anagram_entry.strAnswer[j]
+            anagram_data_list.append(answer_str)
+            if answer_str:
+                anagram_entry.strAnswerIdx[j] = len(offset_data)
+                entry_bytes.extend(anagram_entry.strAnswerIdx[j].to_bytes(4, order))
+                offset_data.append(len(string_data))
+                string_data += answer_str.encode('utf-8') + b'\x00'
+            else:
+                entry_bytes.extend(int("0").to_bytes(4, order))
+
+        # 15 char entry
+        for j in range(15):
+            char_entry = anagram_entry.charText[j]
+            anagram_data_list.append(char_entry.iPosX)
+            anagram_data_list.append(char_entry.iPosY)
+            anagram_data_list.append(char_entry.strText)
+            if not char_entry.is_empty():
+                char_entry.strTextIdx = len(offset_data)
+                offset_data.append(len(string_data))
+                string_data += char_entry.strText.encode('utf-8') + b'\x00'
+                entry_bytes.extend(char_entry.iPosX.to_bytes(4, order))
+                entry_bytes.extend(char_entry.iPosY.to_bytes(4, order))
+                entry_bytes.extend(char_entry.strTextIdx.to_bytes(4, order))
+            else:
+                entry_bytes.extend(int("0").to_bytes(4, order))
+                entry_bytes.extend(int("0").to_bytes(4, order))
+                entry_bytes.extend(int("0").to_bytes(4, order))
+
+        csv_writer.writerow(anagram_data_list)
+
+    # encode table tail
+    for v in str_area.str_table_tail.values():
+        offset_data.append(len(string_data))
+        string_data += v.encode('utf-8') + b'\x00'
+
+    str_index_bytes = bytearray()
+    for offset in offset_data:
+        str_index_bytes.extend(offset.to_bytes(4, order))
+    str_index_bytes = align_to_16_bytes(str_index_bytes)
+
+    string_data = align_to_16_bytes(bytearray(string_data))
+
+    # Build str area data
+    string_area_bytes = bytearray()
+    string_area_bytes.extend(b"GENESTRT")
+    content_data_size = len(str_index_bytes) + len(string_data) + 0x10
+    string_area_bytes.extend(content_data_size.to_bytes(8, order))
+    string_area_bytes.extend(0xE5.to_bytes(4, order))
+    string_area_bytes.extend(0x10.to_bytes(4, order))
+    string_area_bytes.extend((len(str_index_bytes) + 0x10).to_bytes(4, order))
+    string_area_bytes.extend(content_data_size.to_bytes(4, order))
+
+    string_area_bytes.extend(str_index_bytes)
+    string_area_bytes.extend(string_data)
+
+    # Override gdata
+    new_gdata_bytes = bytearray(gdata_bytes)
+    new_gdata_bytes[0x90:0x15A8] = entry_bytes
+
+    with open(output_file, "wb") as f:
+        f.write(pre_data)
+        f.write(string_area_bytes)
+        f.write(new_gdata_bytes)
+
+    csv_file.close()
+
+    hint = f"导出产物 {output_file_name} 完毕！\n请自行打开文件验收！"
+    app_log(hint)
+    AlertDialog(
+        root_window, hint
+    )
 
 
 class AlertDialog:
@@ -550,6 +723,7 @@ class ImageActionPanel:
         self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
         self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
         self.image_label.bind('<Button-3>', self.on_right_click)
+        self.image_label.bind('<Button-2>', self.on_right_click)  # macOS mouse right click use Magic Trackpad
         self.image_label.bind('<Double-Button-1>', self.on_double_click)
 
     def refresh_now_anagram_ui(self):
@@ -748,15 +922,21 @@ class RightPanel:
         button_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 创建按钮
-        buttons = ["按钮1", "按钮2", "按钮3", "按钮4"]
-        for text in buttons:
+        buttons = [
+            ("保存修改", self.on_click_save),
+            ("打开产物", self.on_click_open_product),
+            ("关于程序", self.on_click_open_product)
+        ]
+        for text, command in buttons:
             btn = tk.Button(
                 button_frame, text=text,
                 font=(AnagramEditorApp.FONT_FAMILY, 13),
                 bg='white', fg='black',
                 borderwidth=0,
                 highlightthickness=0,
+                highlightbackground="white",
                 padx=10, pady=5,
+                command=command
             )
             btn.pack(fill=tk.X, pady=5)
 
@@ -841,6 +1021,24 @@ class RightPanel:
             default_value=original_text,
             on_text_changed=on_text_changed
         )
+
+    def on_click_save(self):
+        export_product(self.root_window)
+
+    def on_click_open_product(self):
+        system_platform = platform.system()
+
+        if system_platform == "Windows":
+            os.startfile(output_dir)
+        elif system_platform == "Darwin":
+            subprocess.run(["open", output_dir], check=True)
+        else:
+            subprocess.run(["xdg-open", output_dir], check=True)
+
+        app_log("已打开产物文件夹, 请自行复制产物！")
+
+    def on_click_about(self):
+        pass
 
 
 class AnagramEditorApp:
