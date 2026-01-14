@@ -1,6 +1,140 @@
 import tkinter as tk
+from io import BytesIO
 from tkinter import ttk
+from collections import OrderedDict
 from PIL import Image, ImageDraw, ImageFont, ImageTk
+
+app_log = None
+
+order = "little"
+
+
+def get4_bytes(data, start):
+    return int.from_bytes(data[start: start + 0x04], order)
+
+
+class Anagram:
+    class CharText:
+        def read4_int(self):
+            return int.from_bytes(self.data.read(0x04), order)
+
+        def __init__(self, data, str_table):
+            self.data = data
+
+            self.iPosX = self.read4_int()
+            self.iPosY = self.read4_int()
+            self.strTextIdx = self.read4_int()
+            self.strText = '' if self.strTextIdx == 0 else str_table[str(self.strTextIdx)]
+
+    def __init__(self, data, str_table):
+        self.data = BytesIO(data)
+
+        self.SelfId = self.read4_int()
+        self.iQuestId = self.read4_int()
+        self.iLimitMSec = self.read4_int()
+
+        self.strTitleIdx = self.read4_int()
+        self.strTitle = str_table[str(self.strTitleIdx)]
+
+        self.strAnswerIdx = []
+        self.strAnswer = []
+        self.answerLength = 0
+        for i in range(5):
+            idx = self.read4_int()
+            self.strAnswerIdx.append(idx)
+            answer = '' if idx == 0 else str_table[str(idx)]
+            self.answerLength = max(len(answer), self.answerLength)
+            self.strAnswer.append(answer)
+
+        self.charText = []
+        for i in range(15):
+            self.charText.append(Anagram.CharText(self.data, str_table))
+
+    def read4_int(self):
+        return int.from_bytes(self.data.read(0x04), order)
+
+
+class StrArea:
+    MAGIC = b"GENESTRT"
+
+    def __init__(self, data):
+        self.data = data
+        self.content_size = get4_bytes(data, 0x08)
+        self.flag = get4_bytes(data, 0x10)
+        self.version = get4_bytes(data, 0x14)
+        self.point_table_size = get4_bytes(data, 0x18)
+        self.content_size2 = get4_bytes(data, 0x1C)
+        self.str_table = {}
+        self.str_table_title = {}
+        self.str_table_tail = {}
+        self.parse_index_and_str()
+
+    def parse_index_and_str(self):
+        # STR area parse
+        point_area_end_offset = 0x20 + (self.point_table_size - 0x10)
+        str_point_area_bytes = self.data[0x20:point_area_end_offset]
+
+        str_content_area_bytes = self.data[point_area_end_offset:]
+
+        # Parse strings with index
+        buffer = BytesIO(str_point_area_bytes)
+        idx = 0
+        while True:
+            chunk = buffer.read(4)
+            if not chunk:
+                break
+
+            point_v = int.from_bytes(chunk, order)
+            if point_v != 0:
+                end_pos = str_content_area_bytes.find(b'\x00', point_v)
+                string_bytes = str_content_area_bytes[point_v:end_pos]
+                string_data = string_bytes.decode('utf-8')
+                if string_data:
+                    self.str_table[str(idx)] = string_data
+            else:
+                self.str_table['0'] = "0"
+
+            idx += 1
+
+        # Parse table title and tail desc (will hold it in rebuild)
+        self.str_table_title = OrderedDict(list(self.str_table.items())[1:55])
+        self.str_table_tail = OrderedDict(list(self.str_table.items())[-38:])
+
+
+now_edit_index = 0
+
+game_anagram: list[Anagram] = []
+
+
+def parse_meta_info():
+    with open("resources/anagram.gop", "rb") as file:
+        gop_data = file.read()
+
+        # GDAT area parse
+        gdata_start_offset = gop_data.find(b"GOP GDAT")
+        gdata_bytes = gop_data[gdata_start_offset:]
+
+        magic_size = 0x10
+
+        record_size = get4_bytes(gdata_bytes, 0x10)
+
+        game_count = get4_bytes(gdata_bytes, 0x14)
+        app_log(f"字谜总数: {game_count}")
+
+        data_pos = get4_bytes(gdata_bytes, 0x1C)
+
+        # STR area
+        str_area_data = gop_data[gop_data.find(b"GENESTRT"):gdata_start_offset]
+        str_area = StrArea(str_area_data)
+
+        for i in range(game_count):
+            start_pos = (data_pos + magic_size) + i * record_size
+            end_pos = start_pos + record_size
+            per_game_data = gdata_bytes[start_pos:end_pos]
+            anagram = Anagram(per_game_data, str_area.str_table)
+            game_anagram.append(anagram)
+
+        app_log(f"解析字谜完成")
 
 
 class EditTextDialog:
@@ -109,6 +243,7 @@ class LeftPanel:
             relief=tk.RAISED, borderwidth=1
         )
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 10))
+        left_frame.pack_propagate(False)
 
         # 列表标签
         list_label = tk.Label(
@@ -118,29 +253,81 @@ class LeftPanel:
         )
         list_label.pack(fill=tk.X)
 
+        # 创建主内容框架（上面是列表，下面是日志）
+        content_frame = tk.Frame(left_frame, bg='white')
+        content_frame.pack(fill=tk.BOTH, expand=True)
+
+        # 上部：列表区域（占60%高度）
+        list_container = tk.Frame(content_frame, bg='white')
+        list_container.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+
         # 创建滚动条
-        scrollbar = tk.Scrollbar(left_frame)
+        scrollbar = tk.Scrollbar(list_container)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 创建列表框
         self.list_box = tk.Listbox(
-            left_frame, yscrollcommand=scrollbar.set,
+            list_container, yscrollcommand=scrollbar.set,
             font=(AnagramEditorApp.FONT_FAMILY, 13),
-            bg='white', fg='black', relief=tk.FLAT
+            bg='white', fg='black', relief=tk.FLAT,
+            exportselection=False  # 失去焦点时保持选择
         )
         self.list_box.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # 配置滚动条
         scrollbar.config(command=self.list_box.yview)
 
-        # TODO 这里需要调整成读取出来的题目名称
-        # 添加项目
-        list_items = ["项目1", "项目2", "项目3", "项目4", "项目5"]
-        for item in list_items:
-            self.list_box.insert(tk.END, item)
-
         # 绑定点击事件
         self.list_box.bind('<<ListboxSelect>>', self.on_item_selected)
+
+        # 分隔线
+        separator = tk.Frame(content_frame, height=2, bg='#cccccc')
+        separator.pack(fill=tk.X, pady=5)
+
+        # 下部：日志区域（占40%高度）
+        log_container = tk.Frame(content_frame, bg='white')
+        log_container.pack(fill=tk.BOTH, expand=True)
+
+        # 日志标题
+        log_label = tk.Label(
+            log_container, text="日志",
+            font=(AnagramEditorApp.FONT_FAMILY, 11, 'bold'),
+            bg='#4a7a8c', fg='white', pady=3
+        )
+        log_label.pack(fill=tk.X)
+
+        # 创建日志文本框
+        log_frame = tk.Frame(log_container, bg='white')
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # 日志滚动条
+        log_scrollbar = tk.Scrollbar(log_frame)
+        log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # 日志文本框
+        self.log_text = tk.Text(
+            log_frame,
+            height=8,  # 固定高度
+            font=(AnagramEditorApp.FONT_FAMILY, 10),
+            bg='#f5f5f5',
+            fg='#333333',
+            relief=tk.FLAT,
+            wrap=tk.WORD,  # 自动换行
+            yscrollcommand=log_scrollbar.set,
+            state='disabled'  # 初始为只读
+        )
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+
+        # 配置滚动条
+        log_scrollbar.config(command=self.log_text.yview)
+
+    def fill_list_data(self):
+        for item in range(len(game_anagram)):
+            self.list_box.insert(tk.END, f'字谜 {item + 1:02d}')
+
+        # 默认选中第0项
+        self.list_box.selection_set(0)
+        self.list_box.activate(0)  # 激活第0项
 
     def on_item_selected(self, event):
         if not self.list_box.curselection():
@@ -149,9 +336,29 @@ class LeftPanel:
         index = self.list_box.curselection()[0]
         item = self.list_box.get(index)
 
-        # TODO 这里需要拿到 item index 然后获取全局的题目, 并更新 UI
-        # self.status_label.config(text=f"选择: {item}")
-        self.on_anagram_item_selected()
+        self.on_anagram_item_selected(index, item)
+
+    def log(self, message):
+        """添加日志消息"""
+        import datetime
+
+        # 获取当前时间
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
+        # 启用编辑，添加消息，然后禁用
+        self.log_text.config(state='normal')
+
+        # 插入带时间戳的消息
+        self.log_text.insert(tk.END, f"[{timestamp}] {message}\n")
+
+        # 自动滚动到最后
+        self.log_text.see(tk.END)
+
+        # 恢复只读状态
+        self.log_text.config(state='disabled')
+
+        # 确保界面更新
+        self.log_text.update_idletasks()
 
 
 class ImageActionPanel:
@@ -182,10 +389,11 @@ class ImageActionPanel:
         self.image_label.config(image=self.main_img)
         self.image_label.image = self.main_img
 
-    def __init__(self, root_window, main_frame):
+    def __init__(self, root_window, main_frame, on_title_changed):
         self.root_window = root_window
         self.main_frame = main_frame
-        self.title_text = "点击编辑标题"
+        self.title_text = ""
+        self.on_title_changed = on_title_changed
 
         self.image_frame = tk.Frame(
             main_frame, width=AnagramEditorApp.IMAGE_WIDTH,
@@ -202,6 +410,11 @@ class ImageActionPanel:
 
         self.image_label.bind('<Button-1>', self.on_main_img_click)
 
+    def refresh_now_anagram_ui(self):
+        self.title_text = game_anagram[now_edit_index].strTitle
+
+        self.redraw()
+
     def on_main_img_click(self, event):
         x, y = event.x, event.y
 
@@ -213,9 +426,8 @@ class ImageActionPanel:
         def on_text_changed(new_text):
             self.title_text = new_text
 
+            self.on_title_changed(self.title_text)
             self.redraw()
-
-            print(f"标题已修改为: '{self.title_text}'")
 
         EditTextDialog(
             root_window=self.root_window,
@@ -228,9 +440,10 @@ class ImageActionPanel:
 
 
 class RightPanel:
-    def __init__(self, root_window, main_frame):
+    def __init__(self, root_window, main_frame, on_answer_changed):
         self.root_window = root_window
         self.main_frame = main_frame
+        self.on_answer_changed = on_answer_changed
 
         right_frame = tk.Frame(
             self.main_frame, width=260,
@@ -301,35 +514,21 @@ class RightPanel:
             bg='white',
             fg='black',
             relief=tk.FLAT,
-            height=8  # 显示8行
         )
         self.answer_listbox.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-
-        # TODO 这里需要动态从当前的题目答案进行构建填充
-        # 示例答案数据
-        sample_answers = [
-            "答案1: 这是第一个答案",
-            "答案2: 第二个测试答案",
-            "答案3: 第三个示例答案",
-            "答案4: 第四个可能答案",
-            "答案5: 第五个备选答案",
-            "答案6: 第六个正确答案",
-            "答案7: 第七个候补答案",
-            "答案8: 第八个最终答案",
-            "答案9: 第九个额外答案",
-            "答案10: 第十个补充答案"
-        ]
-
-        self.rebuild_data(sample_answers)
 
     def rebuild_data(self, data):
         # 清空列表并添加数据
         self.answer_listbox.delete(0, tk.END)
         for answer in data:
-            self.answer_listbox.insert(tk.END, answer)
+            if answer:
+                self.answer_listbox.insert(tk.END, answer)
 
         # 绑定双击事件
         self.answer_listbox.bind('<Double-Button-1>', self.on_answer_double_click)
+
+    def refresh_now_anagram_ui(self):
+        self.rebuild_data(game_anagram[now_edit_index].strAnswer)
 
     def on_answer_double_click(self, event):
         # 获取点击的索引
@@ -350,7 +549,7 @@ class RightPanel:
             # 删除原项目，插入新项目
             self.answer_listbox.delete(index)
             self.answer_listbox.insert(index, new_text)
-            print(f"答案已修改为: '{new_text}'")
+            self.on_answer_changed(index, new_text)
 
         EditTextDialog(
             root_window=self.root_window,
@@ -381,6 +580,7 @@ class AnagramEditorApp:
     WINDOW_HEIGHT = IMAGE_HEIGHT + 40  # # 540 + 上下边距
 
     def __init__(self):
+        self.is_changed = False
         self.root = tk.Tk()
         self.root.title(self.TITLE)
 
@@ -399,10 +599,26 @@ class AnagramEditorApp:
             main_frame=self.main_frame,
             on_anagram_item_selected=self.on_anagram_item_selected
         )
-        self.image_action_panel = ImageActionPanel(self.root, self.main_frame)
-        self.right_panel = RightPanel(self.root, self.main_frame)
+        self.image_action_panel = ImageActionPanel(self.root, self.main_frame, self.on_title_changed)
+        self.right_panel = RightPanel(self.root, self.main_frame, self.on_answer_changed)
+
+        global app_log
+        app_log = self.log
+
+        app_log("程序启动")
+
+        parse_meta_info()
+
+        self.left_panel.fill_list_data()
+
+        app_log(f"默认加载字谜 {now_edit_index + 1:02d} 数据")
+        self.refresh_now_anagram_ui()
 
         self.root.mainloop()
+
+    def refresh_now_anagram_ui(self):
+        self.image_action_panel.refresh_now_anagram_ui()
+        self.right_panel.refresh_now_anagram_ui()
 
     def center_window(self, width, height):
         screen_width = self.root.winfo_screenwidth()
@@ -413,8 +629,28 @@ class AnagramEditorApp:
 
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
-    def on_anagram_item_selected(self):
-        pass
+    def on_anagram_item_selected(self, index, item):
+        app_log(f"切换{item}")
+
+        global now_edit_index
+        now_edit_index = index
+
+        self.refresh_now_anagram_ui()
+
+    def on_title_changed(self, text):
+        game_anagram[now_edit_index].strTitle = text
+        app_log(f"字谜 {now_edit_index + 1:02d} 标题已修改为 => {text}")
+
+        self.is_changed = True
+
+    def on_answer_changed(self, index, text):
+        game_anagram[now_edit_index].strAnswer[index] = text
+        app_log(f"字谜 {now_edit_index + 1:02d} 答案 {index + 1} 已修改为 => {text}")
+
+        self.is_changed = True
+
+    def log(self, msg):
+        self.left_panel.log(msg)
 
 
 def main():
