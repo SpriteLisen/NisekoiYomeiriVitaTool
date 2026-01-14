@@ -246,7 +246,7 @@ class EditTextDialog:
 
         entry_var = tk.StringVar(value=default_value)
 
-        def on_text_change():
+        def on_text_change(*args):
             text = entry_var.get()
             if len(text) > max_length:
                 entry_var.set(text[:max_length])
