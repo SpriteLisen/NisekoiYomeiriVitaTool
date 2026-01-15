@@ -800,10 +800,25 @@ class ImageActionPanel:
     def on_delete_char(self):
         if self.right_click_index >= 0:
             answer_length = len(game_anagram[now_edit_index].strAnswer[0])
+
+            answer_count = 0
+            for answer in game_anagram[now_edit_index].strAnswer:
+                if answer:
+                    answer_count += 1
+
             char_count = 0
             for char in game_anagram[now_edit_index].charText:
                 if not char.is_empty():
                     char_count += 1
+
+            if char_count <= answer_count:
+                hint = "删除失败！\n备选字符数不能少于答案数量！"
+                app_log(hint)
+                AlertDialog(
+                    self.root_window,
+                    hint=hint
+                )
+                return
 
             if char_count <= answer_length:
                 hint = "删除失败！\n备选字符数不能少于答案的字数！"
