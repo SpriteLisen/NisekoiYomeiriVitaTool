@@ -18,7 +18,7 @@ lang = "en.json"
 
 try:
     language, _ = locale.getdefaultlocale()
-    # lang = "zh.json" if language is not None and language.lower().startswith('zh') else "en.json"
+    lang = "zh.json" if language is not None and language.lower().startswith('zh') else "en.json"
 
     with open(lang_dir + lang, 'r', encoding='utf-8') as f:
         lang_table = json.load(f)
