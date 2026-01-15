@@ -390,10 +390,13 @@ class AlertDialog:
         req_height = main_frame.winfo_reqheight() + 40  # 加上窗口边框和标题栏的高度
 
         # 居中显示
-        screen_width = alert_window.winfo_screenwidth()
-        screen_height = alert_window.winfo_screenheight()
-        x = (screen_width - width) // 2
-        y = (screen_height - req_height) // 2
+        parent_x = root_window.winfo_rootx()
+        parent_y = root_window.winfo_rooty()
+        parent_width = root_window.winfo_width()
+        parent_height = root_window.winfo_height()
+
+        x = parent_x + (parent_width - width) // 2
+        y = parent_y + (parent_height - req_height) // 2
 
         # 设置最终尺寸
         alert_window.geometry(f"{width}x{req_height}+{x}+{y}")
@@ -425,10 +428,18 @@ class EditTextDialog:
         edit_window.bind('<Escape>', lambda e: edit_window.destroy())
 
         edit_window.update_idletasks()
+
+        parent_x = root_window.winfo_rootx()
+        parent_y = root_window.winfo_rooty()
+        parent_width = root_window.winfo_width()
+        parent_height = root_window.winfo_height()
+
         width = edit_window.winfo_width()
         height = edit_window.winfo_height()
-        x = (edit_window.winfo_screenwidth() // 2) - (width // 2)
-        y = (edit_window.winfo_screenheight() // 2) - (height // 2)
+
+        x = parent_x + (parent_width - width) // 2
+        y = parent_y + (parent_height - height) // 2
+
         edit_window.geometry(f'{width}x{height}+{x}+{y}')
 
         edit_window.focus_force()
