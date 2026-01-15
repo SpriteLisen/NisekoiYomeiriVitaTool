@@ -580,11 +580,15 @@ class LeftPanel:
         # 默认选中第0项
         self.list_box.selection_set(0)
         self.list_box.activate(0)  # 激活第0项
+        self.last_selected_index = 0
 
     def on_item_selected(self, event):
-        if not self.list_box.curselection():
+        selection = self.list_box.curselection()
+        current_index = selection[0]
+        if not selection or current_index == self.last_selected_index:
             return
 
+        self.last_selected_index = current_index
         index = self.list_box.curselection()[0]
         item = self.list_box.get(index)
 
