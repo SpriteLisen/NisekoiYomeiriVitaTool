@@ -1044,7 +1044,7 @@ class RightPanel:
         system_platform = platform.system()
 
         if system_platform == "Windows":
-            os.startfile(output_dir)
+            os.startfile(Path(output_dir).resolve())
         elif system_platform == "Darwin":
             subprocess.run(["open", output_dir], check=True)
         else:
