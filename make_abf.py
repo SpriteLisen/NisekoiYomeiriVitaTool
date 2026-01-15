@@ -5,6 +5,20 @@ from PIL import Image, ImageDraw, ImageFont
 
 font_size = 24
 
+hold_chars = (
+    ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}'
+    '~§¨®°±´¶×÷ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψωЁАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгд'
+    'ежзийклмнопрстуфхцчшщъыьэюяё‐―‘’“”†‡‥…‰′″※℃№℡™ÅⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ←↑→↓⇒⇔∀∂∃∇∈∋∑√∝∞∟∠∥∧∨∩∪∫∬∮∴∵∽≒≠≡'
+    '≦≧≪≫⊂⊃⊆⊇⊥⊿⌒①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳─━│┃┌┏┐┓└┗┘┛├┝┠┣┤┥┨┫┬┯┰┳┴┷┸┻┼┿╂╋■□▲△▼▽◆◇○◎●◯★☆♀♂♥♪♭♯　、。〃'
+    '々〆〇〈〉《》「」『』【】〒〓〔〕'
+    '〝〟ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽ'
+    'まみむめもゃやゅゆょよらりるれろゎわゐゑをん゛゜ゝゞァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅ'
+    'テデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶ・ーヽヾ'
+    '㈱㈲㈹㊤㊥㊦㊧㊨㌃㌍㌔㌘㌢㌣㌦㌧㌫㌶㌻㍉㍊㍍㍑㍗㍻㍼㍽㍾㎎㎏㎜㎝㎞㎡㏄㏍'
+    '！＃＄％＆（）＊＋，－．／０１２３４５６７８９：；＜＝＞？＠ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿｀'
+    'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝～￠￡￢￣￥\n'
+)
+
 
 def modify_font_preserve_structure(original_abf_path, original_png_path, char_list, output_abf_path, output_png_path,
                                    font_path):
@@ -46,6 +60,8 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
     char_data = []
     pos = body_start_pos
 
+    min_char_data = []
+
     while pos < len(original_abf):
         # 检查是否到达文件尾
         if pos + 8 <= len(original_abf):
@@ -64,6 +80,10 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         try:
             original_char = chr(int.from_bytes(unicode_bytes, 'big'))
 
+            if original_char in hold_chars:
+                pos += 32
+                continue
+
             # 提取所有属性
             column = int.from_bytes(original_abf[pos + 4:pos + 6], 'big')
             row = int.from_bytes(original_abf[pos + 6:pos + 8], 'big')
@@ -74,22 +94,30 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
             left_margin = int.from_bytes(original_abf[pos + 12:pos + 14], 'big')
             text_space = int.from_bytes(original_abf[pos + 16:pos + 18], 'big')
 
+            entry_info = {
+                'file_position': pos,
+                'original_char': original_char,
+                'column': column,
+                'row': row,
+                'width': width,
+                'height': height,
+                'left_margin': left_margin,
+                'text_space': text_space,
+                'segment_data': bytearray(original_abf[pos:pos + 32])
+            }
+
+            if width < 23:
+                pos += 32
+                print(f"min width: {width} => {original_char}")
+                min_char_data.append(entry_info)
+                continue
+
             # 检查边界：确保字符位置在图片范围内
             if (column >= 0 and row >= 0 and
                     column + width <= img_width and
                     row + height <= img_height):
 
-                char_data.append({
-                    'file_position': pos,
-                    'original_char': original_char,
-                    'column': column,
-                    'row': row,
-                    'width': width,
-                    'height': height,
-                    'left_margin': left_margin,
-                    'text_space': text_space,
-                    'segment_data': bytearray(original_abf[pos:pos + 32])
-                })
+                char_data.append(entry_info)
             else:
                 print(
                     f"Warning: Character '{original_char}' at position ({column}, {row}) with size {width}x{height} is out of bounds")
@@ -105,27 +133,13 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
     # 按行列坐标排序（先按行，再按列）
     char_data.sort(key=lambda x: (x['row'], x['column']))
 
-    # 分析行分布，找到第一行和第二行的分界
-    rows = sorted(set(char_info['row'] for char_info in char_data))
-    print(f"Available rows: {rows}")
-
-    # 直接跳过第一行，只使用第二行及以后的位置
-    first_row = rows[0]
-    second_row = rows[1]
-    print(f"Skipping first row: {first_row}, Using rows from: {second_row}")
-
-    # 只保留第二行及以后的字符
-    usable_char_data = [char_info for char_info in char_data if char_info['row'] >= second_row]
-    skipped_char_data = [char_info for char_info in char_data if char_info['row'] == first_row]
-
-    print(f"Skipped first row characters: {len(skipped_char_data)}")
-    print(f"Usable characters (from second row): {len(usable_char_data)}")
+    usable_char_data = char_data
 
     # 创建新的ABF文件（完全复制原始文件，后面再修改）
     new_abf = bytearray(original_abf)
 
     # 用于记录已使用的 Unicode 码点，避免重复
-    used_unicode_points = set()
+    used_unicode_points = []
 
     # 第一阶段：为每个新字符寻找合适的位置（只使用第二行及以后的位置）
     print(f"\nMatching {len(char_list)} characters to suitable slots (first row skipped)...")
@@ -133,84 +147,15 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
     matched_slots = []
     used_slots = set()
 
+    now_index = 0
+
     for new_char in char_list:
-        # 获取新字符的预估尺寸
-        try:
-            bbox = new_font.getbbox(new_char)
-            left, top, right, bottom = bbox
-            estimated_width = right - left
-            estimated_height = bottom - top
-        except:
-            estimated_width = font_size
-            estimated_height = font_size
-
-        # 寻找合适的位置（只在使用第二行及以后的位置中寻找）
-        best_slot_index = -1
-
-        for i, char_info in enumerate(usable_char_data):
-            if i in used_slots:
-                continue
-
-            # 检查尺寸是否合适且不会超出边界
-            char_width = char_info['width']
-            char_height = char_info['height']
-            column = char_info['column']
-            row = char_info['row']
-
-            # 计算实际绘制后的边界
-            actual_right = column + char_info['left_margin'] + estimated_width - left
-            actual_bottom = row + char_height
-
-            if (char_width >= estimated_width + 2 and
-                    char_height >= estimated_height + 2 and
-                    actual_right <= img_width and
-                    actual_bottom <= img_height):
-                best_slot_index = i
-                break
-
-        # 如果没找到完全合适的，放宽条件
-        if best_slot_index == -1:
-            for i, char_info in enumerate(usable_char_data):
-                if i in used_slots:
-                    continue
-
-                char_width = char_info['width']
-                char_height = char_info['height']
-                column = char_info['column']
-                row = char_info['row']
-                actual_right = column + char_info['left_margin'] + estimated_width - left
-                actual_bottom = row + char_height
-
-                if (char_width >= estimated_width and
-                        char_height >= estimated_height and
-                        actual_right <= img_width and
-                        actual_bottom <= img_height):
-                    best_slot_index = i
-                    break
-
-        # 如果还是没找到，使用第一个不会超界的可用位置
-        if best_slot_index == -1:
-            for i, char_info in enumerate(usable_char_data):
-                if i in used_slots:
-                    continue
-
-                char_width = char_info['width']
-                char_height = char_info['height']
-                column = char_info['column']
-                row = char_info['row']
-                actual_right = column + char_info['left_margin'] + estimated_width - left
-                actual_bottom = row + char_height
-
-                if actual_right <= img_width and actual_bottom <= img_height:
-                    best_slot_index = i
-                    break
-
-        if best_slot_index != -1:
-            matched_slots.append((usable_char_data[best_slot_index], new_char))
-            used_slots.add(best_slot_index)
-            print(f"Matched '{new_char}' to slot {best_slot_index + 1}")
-        else:
-            print(f"Warning: No suitable slot found for character '{new_char}'")
+        used_slots.add(now_index)
+        matched_slots.append((usable_char_data[now_index], new_char))
+        use_char = usable_char_data[now_index]
+        print(
+            f"Matched '{new_char}' to slot {now_index + 1} => {use_char['original_char']} , width: {use_char['width']} , height: {use_char['height']}")
+        now_index += 1
 
     # 第二阶段：替换使用的字符
     print(f"\nReplacing {len(matched_slots)} characters with simple drawing method...")
@@ -225,7 +170,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         file_pos = char_info['file_position']
         new_unicode_bytes = new_unicode.to_bytes(4, 'big')
         new_abf[file_pos:file_pos + 4] = new_unicode_bytes
-        used_unicode_points.add(new_unicode)
+        used_unicode_points.append(new_unicode)
 
         # 2. 修改 PNG：在原始位置绘制新字符
         column = char_info['column']
@@ -235,10 +180,10 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         # left_margin = char_info['left_margin']
 
         # 彻底清除原始区域（扩大清理范围）
-        clean_left = max(0, column - 1)
-        clean_top = max(0, row - 1)
-        clean_right = min(img_width, column + width + 1)
-        clean_bottom = min(img_height, row + height + 1)
+        clean_left = max(0, column)
+        clean_top = max(0, row)
+        clean_right = min(img_width, column + width)
+        clean_bottom = min(img_height, row + height)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
         # 获取新字符的bbox
@@ -247,30 +192,20 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         char_width = right - left
         char_height_actual = bottom - top
 
-        x_offset = column
+        x_offset = column - 1
         y_offset = row - 2
 
-        # 最终边界检查
-        if (x_offset + char_width <= img_width and
-                y_offset + char_height_actual <= img_height and
-                x_offset >= 0 and y_offset >= 0):
-
-            # 直接绘制字符
-            draw.text((x_offset, y_offset), new_char, fill=(255, 255, 255, 255), font=new_font)
-            print(f"  Drawn at: x={x_offset}, y={y_offset}")
-        else:
-            print(f"  Warning: Character '{new_char}' would be drawn out of bounds at ({x_offset}, {y_offset})")
+        # 直接绘制字符
+        draw.text((x_offset, y_offset), new_char, fill=(255, 255, 255, 255), font=new_font)
+        print(f"  Drawn at: x={x_offset}, y={y_offset}")
 
     print(f"final_chars: \n{final_chars}")
 
     # 第三阶段：处理未使用的字符位置（包括第一行和未使用的第二行及以后的位置）
     print(f"\nProcessing unused character slots...")
 
-    # 处理未使用的第二行及以后的位置
-    unused_usable_count = len(usable_char_data) - len(used_slots)
-    print(f"Unused slots from second row: {unused_usable_count}")
-
     next_unicode = 0xE000
+    usable_char_data += min_char_data
     for i, char_info in enumerate(usable_char_data):
         if i in used_slots:
             continue
@@ -281,7 +216,7 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
 
         new_unicode_bytes = next_unicode.to_bytes(4, 'big')
         new_abf[file_pos:file_pos + 4] = new_unicode_bytes
-        used_unicode_points.add(next_unicode)
+        used_unicode_points.append(next_unicode)
         next_unicode += 1
 
         # 清除未使用的位置
@@ -289,38 +224,11 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         row = char_info['row']
         width = char_info['width']
         height = char_info['height']
-        clean_left = max(0, column - 1)
-        clean_top = max(0, row - 1)
-        clean_right = min(img_width, column + width + 1)
-        clean_bottom = min(img_height, row + height + 1)
+        clean_left = max(0, column - 2)
+        clean_top = max(0, row - 2)
+        clean_right = min(img_width, column + width - 1)
+        clean_bottom = min(img_height, row + height - 1)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
-
-    # 第一行的字符全部清除并标记为未使用
-    if len(rows) > 1:
-        first_row = rows[0]
-        first_row_chars = [char_info for char_info in char_data if char_info['row'] == first_row]
-        print(f"Clearing first row: {len(first_row_chars)} characters")
-
-        for char_info in first_row_chars:
-            file_pos = char_info['file_position']
-            while next_unicode in used_unicode_points:
-                next_unicode += 1
-
-            new_unicode_bytes = next_unicode.to_bytes(4, 'big')
-            new_abf[file_pos:file_pos + 4] = new_unicode_bytes
-            used_unicode_points.add(next_unicode)
-            next_unicode += 1
-
-            # 清除第一行的位置
-            column = char_info['column']
-            row = char_info['row']
-            width = char_info['width']
-            height = char_info['height']
-            clean_left = max(0, column - 1)
-            clean_top = max(0, row - 1)
-            clean_right = min(img_width, column + width + 1)
-            clean_bottom = min(img_height, row + height + 1)
-            draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
     # 验证文件大小不变
     if len(new_abf) != len(original_abf):
@@ -399,7 +307,7 @@ if __name__ == "__main__":
     all_chars = parse_use_chars()
 
     # 去重并排序
-    char_list = sorted(set(all_chars))
+    char_list = sorted(set(all_chars) - set(hold_chars))
     print(f"Characters: {char_list}")
     print(f"Characters to replace: {len(char_list)}")
 
