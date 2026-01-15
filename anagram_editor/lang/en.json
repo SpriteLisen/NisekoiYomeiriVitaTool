@@ -37,5 +37,7 @@
   "log_open_product_success": "Output folder opened. Please copy the output manually!",
   "log_change_anagram_item": "Switched to anagram {0}",
   "log_anagram_title_changed": "Anagram {0} title changed to => {1}",
-  "log_anagram_answer_changed": "Anagram {0} answer {1} changed to => {2}"
+  "log_anagram_answer_changed": "Anagram {0} answer {1} changed to => {2}",
+
+  "about_desc": "Anagram Editor {0}\n\nDescription: This software is specifically developed for visual translation of the anagram minigame in the PSVita version of the game \"Nisekoi: Yomeiri!?\".\n\nDeveloper: SpriteLisen\nAuthor's Homepage: https://github.com/SpriteLisen\n\nFeel free to contact for any questions!"
 }

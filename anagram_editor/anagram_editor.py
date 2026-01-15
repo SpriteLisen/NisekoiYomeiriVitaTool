@@ -11,6 +11,8 @@ from pathlib import Path
 from collections import OrderedDict
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
+VERSION = "1.0.0"
+
 lang_table: dict = {}
 
 lang_dir = "lang/"
@@ -978,7 +980,7 @@ class RightPanel:
         buttons = [
             (lang_table["save_change_button"], self.on_click_save),
             (lang_table["open_product_button"], self.on_click_open_product),
-            (lang_table["about_program_button"], self.on_click_open_product)
+            (lang_table["about_program_button"], self.on_click_about)
         ]
         for text, command in buttons:
             btn = tk.Button(
@@ -1091,7 +1093,10 @@ class RightPanel:
         app_log(lang_table["log_open_product_success"])
 
     def on_click_about(self):
-        pass
+        AlertDialog(
+            self.root_window,
+            hint=lang_table["about_desc"].format(VERSION),
+        )
 
 
 class AnagramEditorApp:
