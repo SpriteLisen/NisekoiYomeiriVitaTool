@@ -1116,6 +1116,8 @@ class AnagramEditorApp:
         self.is_changed = False
         self.root = tk.Tk()
         self.root.title(self.TITLE)
+        self.icon_img = tk.PhotoImage(file="resources/icon.png")
+        self.root.iconphoto(True, self.icon_img)
 
         self.root.resizable(False, False)
 
