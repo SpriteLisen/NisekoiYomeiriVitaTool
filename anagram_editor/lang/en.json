@@ -1,0 +1,41 @@
+{
+  "window_title": "Anagram Editor",
+
+  "anagram_list_title": "Anagram List",
+  "log_title": "Log",
+  "button_title": "Edit Operations",
+  "answer_list_title": "Answer List",
+
+  "edit_answer_title_dialog_title": "Edit Title",
+  "edit_answer_title_dialog_hint": "Edit title (max 16 characters):",
+  "edit_answer_char_dialog_title": "Edit Character",
+  "edit_answer_char_dialog_hint": "Edit character (max 1 character):",
+  "edit_answer_dialog_title": "Edit Answer",
+  "edit_answer_dialog_hint": "Edit answer (max 7 characters):",
+
+  "export_product_success_hint": "Export product {0} completed!\nPlease open the file to verify!",
+  "delete_char_less_answer_count_hint": "Deletion failed!\nCandidate characters cannot be fewer than the number of answers!",
+  "delete_char_less_answer_length_hint": "Deletion failed!\nCandidate characters cannot be fewer than the total characters in answers!",
+  "add_char_to_more_hint": "Addition failed!\nMaximum of fifteen characters allowed",
+  "other_answer_length_less_first_answer_hint": "Detected subsequent answers exceeding the length of the modified first answer. Subsequent answers have been truncated. Please adjust manually!",
+  "reject_other_answer_length_over_first_answer_hint": "Subsequent answers cannot exceed the character length of Answer 1. Current character limit: {0}, please re-enter the answer!",
+
+  "save_change_button": "Save Changes",
+  "open_product_button": "Open Output",
+  "about_program_button": "About Program",
+
+  "default_char_value": "C",
+
+  "log_app_start": "Program started",
+  "log_load_default_data_success": "Loaded default anagram {0} data",
+  "log_anagram_count": "Total anagrams: {0}",
+  "log_decode_anagram_success": "Anagram parsing completed",
+  "log_restore_last_edit_success": "Last edit state restored",
+  "log_delete_char_success": "Deleted candidate character => {1} from anagram {0}",
+  "log_add_char_success": "Added candidate character => {1} to anagram {0}",
+  "log_change_char_success": "Changed candidate character [{1}] to [{2}] in anagram {0}",
+  "log_open_product_success": "Output folder opened. Please copy the output manually!",
+  "log_change_anagram_item": "Switched to anagram {0}",
+  "log_anagram_title_changed": "Anagram {0} title changed to => {1}",
+  "log_anagram_answer_changed": "Anagram {0} answer {1} changed to => {2}"
+}

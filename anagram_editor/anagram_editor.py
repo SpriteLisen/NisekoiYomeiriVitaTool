@@ -1,5 +1,7 @@
 import os
 import csv
+import json
+import locale
 import platform
 import subprocess
 import tkinter as tk
@@ -8,6 +10,21 @@ from tkinter import ttk
 from pathlib import Path
 from collections import OrderedDict
 from PIL import Image, ImageDraw, ImageFont, ImageTk
+
+lang_table: dict = {}
+
+lang_dir = "lang/"
+lang = "en.json"
+
+try:
+    language, _ = locale.getdefaultlocale()
+    # lang = "zh.json" if language is not None and language.lower().startswith('zh') else "en.json"
+
+    with open(lang_dir + lang, 'r', encoding='utf-8') as f:
+        lang_table = json.load(f)
+except Exception as e:
+    with open(lang_dir + "en.json", 'r', encoding='utf-8') as f:
+        lang_table = json.load(f)
 
 app_log = None
 
@@ -39,7 +56,7 @@ class Anagram:
     MAX_CHAR_SIZE = 15
 
     class CharText:
-        DEFAULT_CHAR = "字"
+        DEFAULT_CHAR = lang_table["default_char_value"][:1]
 
         def read4_int(self):
             return int.from_bytes(self.data.read(0x04), order)
@@ -162,7 +179,7 @@ def parse_meta_info():
         record_size = get4_bytes(gdata_bytes, 0x10)
 
         game_count = get4_bytes(gdata_bytes, 0x14)
-        app_log(f"字谜总数: {game_count}")
+        app_log(lang_table["log_anagram_count"].format(game_count))
 
         data_pos = get4_bytes(gdata_bytes, 0x1C)
 
@@ -179,7 +196,7 @@ def parse_meta_info():
             anagram = Anagram(per_game_data, str_area.str_table)
             game_anagram.append(anagram)
 
-        app_log(f"解析字谜完成")
+        app_log(lang_table["log_decode_anagram_success"])
 
     if os.path.exists(output_csv_file):
         with open(output_csv_file, 'r', newline='', encoding='utf-8-sig') as csv_file:
@@ -203,7 +220,7 @@ def parse_meta_info():
                     char_entry.iPosY = int(row[f"iPosY{j:02d}"])
                     char_entry.strText = row[f"strText{j:02d}"]
 
-        app_log("已恢复上次编辑状态")
+        app_log(lang_table["log_restore_last_edit_success"])
 
 
 def export_product(root_window):
@@ -316,7 +333,7 @@ def export_product(root_window):
 
     csv_file.close()
 
-    hint = f"导出产物 {output_file_name} 完毕！\n请自行打开文件验收！"
+    hint = lang_table["export_product_success_hint"].format(output_file_name)
     app_log(hint)
     AlertDialog(
         root_window, hint
@@ -542,7 +559,7 @@ class LeftPanel:
 
         # 日志标题
         log_label = tk.Label(
-            log_container, text="日志",
+            log_container, text=lang_table["log_title"],
             font=(AnagramEditorApp.FONT_FAMILY, 11, 'bold'),
             bg='#4a7a8c', fg='white', pady=3
         )
@@ -816,7 +833,7 @@ class ImageActionPanel:
                     char_count += 1
 
             if char_count <= answer_count:
-                hint = "删除失败！\n备选字符数不能少于答案数量！"
+                hint = lang_table["delete_char_less_answer_count_hint"]
                 app_log(hint)
                 AlertDialog(
                     self.root_window,
@@ -825,7 +842,7 @@ class ImageActionPanel:
                 return
 
             if char_count <= answer_length:
-                hint = "删除失败！\n备选字符数不能少于答案的字数！"
+                hint = lang_table["delete_char_less_answer_length_hint"]
                 app_log(hint)
                 AlertDialog(
                     self.root_window,
@@ -843,7 +860,9 @@ class ImageActionPanel:
 
             char_list[original_length - 1] = Anagram.CharText()
 
-            app_log(f'已删除字谜 {now_edit_index + 1:02d} 的备选字 => {remove_char}')
+            app_log(
+                lang_table["log_delete_char_success"].format(f"{now_edit_index + 1:02d}", remove_char)
+            )
 
             self.redraw()
 
@@ -856,7 +875,7 @@ class ImageActionPanel:
                 char_count += 1
 
         if char_count >= Anagram.MAX_CHAR_SIZE:
-            hint = "新增失败！\n最多增加十五个字符"
+            hint = lang_table["add_char_to_more_hint"]
             app_log(hint)
             AlertDialog(
                 self.root_window,
@@ -869,7 +888,9 @@ class ImageActionPanel:
         char_entry.iPosY = self.right_click_y
         char_entry.strText = Anagram.CharText.DEFAULT_CHAR
 
-        app_log(f'已新增字谜 {now_edit_index + 1:02d} 的备选字 => {Anagram.CharText.DEFAULT_CHAR}')
+        app_log(
+            lang_table["log_add_char_success"].format(f"{now_edit_index + 1:02d}", Anagram.CharText.DEFAULT_CHAR)
+        )
 
         self.redraw()
 
@@ -900,7 +921,9 @@ class ImageActionPanel:
 
     def show_char_edit_dialog(self, bubble):
         def on_text_changed(new_text):
-            app_log(f"已将字谜 {now_edit_index + 1:02d} 的备选字 [{bubble.strText}] 修改为 [{new_text}]")
+            app_log(
+                lang_table["log_change_char_success"].format(f"{now_edit_index + 1:02d}", bubble.strText, new_text)
+            )
             bubble.strText = new_text
             self.redraw()
 
@@ -942,9 +965,9 @@ class RightPanel:
 
         # 创建按钮
         buttons = [
-            ("保存修改", self.on_click_save),
-            ("打开产物", self.on_click_open_product),
-            ("关于程序", self.on_click_open_product)
+            (lang_table["save_change_button"], self.on_click_save),
+            (lang_table["open_product_button"], self.on_click_open_product),
+            (lang_table["about_program_button"], self.on_click_open_product)
         ]
         for text, command in buttons:
             btn = tk.Button(
@@ -970,7 +993,7 @@ class RightPanel:
         # 答案列表标题
         answer_title = tk.Label(
             parent_frame,
-            text="答案列表",
+            text=lang_table["answer_list_title"],
             font=(AnagramEditorApp.FONT_FAMILY, 15, 'bold'),
             bg=AnagramEditorApp.PANEL_BG_COLOR,
             fg='#2c3e50',
@@ -1034,8 +1057,8 @@ class RightPanel:
 
         EditTextDialog(
             root_window=self.root_window,
-            title="编辑答案",
-            hint="编辑答案（最多7个字符）:",
+            title=lang_table["edit_answer_dialog_title"],
+            hint=lang_table["edit_answer_dialog_hint"],
             max_length=7,
             default_value=original_text,
             on_text_changed=on_text_changed
@@ -1054,17 +1077,17 @@ class RightPanel:
         else:
             subprocess.run(["xdg-open", output_dir], check=True)
 
-        app_log("已打开产物文件夹, 请自行复制产物！")
+        app_log(lang_table["log_open_product_success"])
 
     def on_click_about(self):
         pass
 
 
 class AnagramEditorApp:
-    TITLE = "字谜编辑器"
+    TITLE = lang_table["window_title"]
 
-    ANAGRAM_LIST_TITLE = "字谜题集列表"
-    EDIT_ACTION_TITLE = "编辑操作"
+    ANAGRAM_LIST_TITLE = lang_table["anagram_list_title"]
+    EDIT_ACTION_TITLE = lang_table["button_title"]
 
     FONT_FAMILY = "微软雅黑"
 
@@ -1104,13 +1127,15 @@ class AnagramEditorApp:
         global app_log
         app_log = self.log
 
-        app_log("程序启动")
+        app_log(lang_table["log_app_start"])
 
         parse_meta_info()
 
         self.left_panel.fill_list_data()
 
-        app_log(f"默认加载字谜 {now_edit_index + 1:02d} 数据")
+        app_log(
+            lang_table["log_load_default_data_success"].format(f"{now_edit_index + 1:02d}")
+        )
         self.refresh_now_anagram_ui()
 
         self.root.mainloop()
@@ -1129,7 +1154,7 @@ class AnagramEditorApp:
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def on_anagram_item_selected(self, index, item):
-        app_log(f"切换{item}")
+        app_log(lang_table["log_change_anagram_item"].format(f"{index + 1:02d}"))
 
         global now_edit_index
         now_edit_index = index
@@ -1138,14 +1163,18 @@ class AnagramEditorApp:
 
     def on_title_changed(self, text):
         game_anagram[now_edit_index].strTitle = text
-        app_log(f"字谜 {now_edit_index + 1:02d} 标题已修改为 => {text}")
+        app_log(
+            lang_table["log_anagram_title_changed"].format(f"{now_edit_index + 1:02d}", text)
+        )
 
         self.is_changed = True
 
     def on_answer_changed(self, index, text):
         def modify_answer():
             game_anagram[now_edit_index].strAnswer[index] = text
-            app_log(f"字谜 {now_edit_index + 1:02d} 答案 {index + 1} 已修改为 => {text}")
+            app_log(
+                lang_table["log_anagram_answer_changed"].format(f"{now_edit_index + 1:02d}", f"{index + 1}", text)
+            )
 
             self.is_changed = True
 
@@ -1164,7 +1193,7 @@ class AnagramEditorApp:
                 modify_answer()
                 self.right_panel.refresh_now_anagram_ui()
 
-                hint = "检测到后续答案超出新修改初始答案的长度, 已将后续答案截断, 请自行修改调整！"
+                hint = lang_table["other_answer_length_less_first_answer_hint"]
 
                 app_log(hint)
 
@@ -1176,8 +1205,7 @@ class AnagramEditorApp:
         else:
             max_length = len(game_anagram[now_edit_index].strAnswer[0])
             if len(text) > max_length:
-                # TODO 弹窗提示
-                hint = f"后续答案不能超过答案1的字符长度, 当前字符上限为: {max_length}, 请重新输入答案！"
+                hint = lang_table["reject_other_answer_length_over_first_answer_hint"].format(max_length)
                 app_log(hint)
 
                 AlertDialog(self.root, hint=hint)

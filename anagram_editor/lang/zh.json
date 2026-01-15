@@ -1,0 +1,41 @@
+{
+  "window_title": "字谜编辑器",
+
+  "anagram_list_title": "字谜题集列表",
+  "log_title": "日志",
+  "button_title": "编辑操作",
+  "answer_list_title": "答案列表",
+
+  "edit_answer_title_dialog_title": "编辑标题",
+  "edit_answer_title_dialog_hint": "编辑标题（最多16个字符）:",
+  "edit_answer_char_dialog_title": "编辑字符",
+  "edit_answer_char_dialog_hint": "编辑字符（最多1个字符）:",
+  "edit_answer_dialog_title": "编辑答案",
+  "edit_answer_dialog_hint": "编辑答案（最多7个字符）:",
+
+  "export_product_success_hint": "导出产物 {0} 完毕！\n请自行打开文件验收！",
+  "delete_char_less_answer_count_hint": "删除失败！\n备选字符数不能少于答案数量！",
+  "delete_char_less_answer_length_hint": "删除失败！\n备选字符数不能少于答案的字数！",
+  "add_char_to_more_hint": "新增失败！\n最多增加十五个字符",
+  "other_answer_length_less_first_answer_hint": "检测到后续答案超出新修改初始答案的长度, 已将后续答案截断, 请自行修改调整！",
+  "reject_other_answer_length_over_first_answer_hint": "后续答案不能超过答案1的字符长度, 当前字符上限为: {0}, 请重新输入答案！",
+
+  "save_change_button": "保存修改",
+  "open_product_button": "打开产物",
+  "about_program_button": "关于程序",
+
+  "default_char_value": "字",
+
+  "log_app_start": "程序启动",
+  "log_load_default_data_success": "默认加载字谜 {0} 数据",
+  "log_anagram_count": "字谜总数: {0}",
+  "log_decode_anagram_success": "解析字谜完成",
+  "log_restore_last_edit_success": "已恢复上次编辑状态",
+  "log_delete_char_success": "已删除字谜 {0} 的备选字 => {1}",
+  "log_add_char_success": "已新增字谜 {0} 的备选字 => {1}",
+  "log_change_char_success": "已将字谜 {0} 的备选字 [{1}] 修改为 [{2}]",
+  "log_open_product_success": "已打开产物文件夹, 请自行复制产物！",
+  "log_change_anagram_item": "切换字谜{0}",
+  "log_anagram_title_changed": "字谜 {0} 标题已修改为 => {1}",
+  "log_anagram_answer_changed": "字谜 {0} 答案 {1} 已修改为 => {2}"
+}
