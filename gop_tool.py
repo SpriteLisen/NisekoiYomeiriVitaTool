@@ -7,6 +7,8 @@ from pathlib import Path
 
 break_line_char = "@n"
 
+ignore_file = "talkanagram"
+
 def is_alpha_underscore(text):
     """
     判断字符串是否只包含大小写字母和下划线
@@ -99,6 +101,9 @@ def process_gop_files(folder_path, extract_path):
     for file_path in gop_files:
         filename = os.path.basename(file_path)
 
+        if ignore_file in filename:
+            continue
+
         strings_with_offset, alignment_info, _ = parse_gop_file(file_path)
 
         if strings_with_offset is not None and alignment_info is not None:
@@ -143,6 +148,10 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
 
     for gop_file in gop_files:
         filename = Path(gop_file).name
+
+        if ignore_file in filename:
+            continue
+
         csv_file = Path(csv_folder) / (Path(gop_file).stem + ".csv")
 
         if not csv_file.exists():
