@@ -297,7 +297,7 @@ def export_product(root_window):
     string_area_bytes.extend(b"GENESTRT")
     content_data_size = len(str_index_bytes) + len(string_data) + 0x10
     string_area_bytes.extend(content_data_size.to_bytes(8, order))
-    string_area_bytes.extend(0xE5.to_bytes(4, order))
+    string_area_bytes.extend((len(offset_data) - 1).to_bytes(4, order))
     string_area_bytes.extend(0x10.to_bytes(4, order))
     string_area_bytes.extend((len(str_index_bytes) + 0x10).to_bytes(4, order))
     string_area_bytes.extend(content_data_size.to_bytes(4, order))
