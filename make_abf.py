@@ -20,8 +20,11 @@ hold_chars = (
 )
 
 
-def modify_font_preserve_structure(original_abf_path, original_png_path, char_list, output_abf_path, output_png_path,
-                                   font_path):
+def modify_font_preserve_structure(
+        original_abf_path, original_png_path,
+        char_list, output_abf_path, output_png_path,
+        font_path, x_off, y_off
+):
     """
     修改原始 ABF 和 PNG 文件，保持原始文件结构不变
     """
@@ -187,13 +190,13 @@ def modify_font_preserve_structure(original_abf_path, original_png_path, char_li
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
         # 获取新字符的bbox
-        bbox = new_font.getbbox(new_char)
-        left, top, right, bottom = bbox
-        char_width = right - left
-        char_height_actual = bottom - top
+        # bbox = new_font.getbbox(new_char)
+        # left, top, right, bottom = bbox
+        # char_width = right - left
+        # char_height_actual = bottom - top
 
-        x_offset = column - 1
-        y_offset = row - 2
+        x_offset = column - x_off
+        y_offset = row - y_off
 
         # 直接绘制字符
         draw.text((x_offset, y_offset), new_char, fill=(255, 255, 255, 255), font=new_font)
@@ -296,11 +299,26 @@ def parse_use_chars():
     return all_chars
 
 
+font_config = {
+    "WenQuan": {
+        "ttf": "font/ttf/WenQuanDengKuanWeiMiHei.ttf",
+        "x_offset": 1,
+        "y_offset": 2,
+    },
+
+    "ResourceHan": {
+        "ttf": "font/ttf/ResourceHanRoundedCN-Normal.ttf",
+        "x_offset": 1,
+        "y_offset": 8,
+    }
+}
+
 if __name__ == "__main__":
     # 配置参数
     ORIGINAL_ABF = "font/origin/font_j24x24.abf"
     ORIGINAL_PNG = "font/origin/font_j24x24_0.png"
-    NEW_FONT = "font/ttf/WenQuanDengKuanWeiMiHei.ttf"
+    font_info = font_config["ResourceHan"]
+    NEW_FONT = font_info["ttf"]
     OUTPUT_ABF = "font_j24x24.abf"
     OUTPUT_PNG = "images/modified/font/font_j24x24/font_j24x24_0.png"
 
@@ -324,5 +342,7 @@ if __name__ == "__main__":
         supported_chars,
         OUTPUT_ABF,
         OUTPUT_PNG,
-        NEW_FONT
+        NEW_FONT,
+        font_info["x_offset"],
+        font_info["y_offset"]
     )
