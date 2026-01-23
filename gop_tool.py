@@ -4,16 +4,21 @@ import csv
 import sys
 import glob
 from pathlib import Path
+from make_abf import font_config, choose_font, half_to_full
 
 break_line_char = "@n"
 
+need_holder_chars = font_config[choose_font]["holder_char"]
+
 ignore_file = "talkanagram"
+
 
 def is_alpha_underscore(text):
     """
     判断字符串是否只包含大小写字母和下划线
     """
     return bool(re.match(r'^[a-zA-Z_]+$', text))
+
 
 def parse_gop_file(file_path):
     """
@@ -64,7 +69,6 @@ def parse_gop_file(file_path):
                     # 记录字符串在指针表中的偏移量
                     table_offset = table_start_point + 16 + i
                     strings_with_offset.append((f"0x{table_offset:04X}", string_data))
-
 
         alignment_info = {
             'genestrt_pos': genestrt_pos,
@@ -174,8 +178,8 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
             reader = csv.DictReader(csvfile)
             for row in reader:
                 csv_offsets.append(int(row['offset'], 16))
-                csv_strings.append(row['string'].replace(break_line_char, "\n"))
-                csv_translate.append(row['translate'].replace(break_line_char, "\n"))
+                csv_strings.append(row['string'].replace(break_line_char, "\n").replace("＠ｎ", "\n"))
+                csv_translate.append(row['translate'].replace(break_line_char, "\n").replace("＠ｎ", "\n"))
 
         if len(csv_strings) != len(strings_with_offset):
             print(f"  警告: CSV字符串数量({len(csv_strings)})与原始文件({len(strings_with_offset)})不匹配")
@@ -195,6 +199,11 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
 
             # 添加字符串内容和 null 终止符
             trans_text = csv_translate[idx]
+
+            if not need_holder_chars:
+                # string = half_to_full(string)
+                trans_text = half_to_full(trans_text)
+
             if trans_text:
                 is_trans_command = is_alpha_underscore(trans_text)
 
@@ -268,6 +277,7 @@ def usage():
     print("Usage:")
     print("  Extract *.gop -> python gop_tool.py extract")
     print("  Repack *.gop  -> python gop_tool.py repack")
+
 
 def main():
     # 配置路径

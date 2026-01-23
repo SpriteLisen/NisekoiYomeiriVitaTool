@@ -2,9 +2,12 @@ import re
 import sys
 import csv
 from pathlib import Path
+from make_abf import font_config, choose_font, half_to_full
 
 default_encode = "utf-8"
 break_line_char = "@n"
+
+need_holder_chars = font_config[choose_font]["holder_char"]
 
 say_title_prefix = "@say "
 
@@ -365,16 +368,22 @@ class ASBStringTool:
                 if row[1].startswith(say_title_prefix) or ASBStringTool.is_say_style(row[1]):
                     continue
 
-                rows.append((pointer_pos, row[1], row[2]))
+                rows.append(
+                    (
+                        pointer_pos,
+                        row[1] if need_holder_chars else half_to_full(row[1]),
+                        row[2] if need_holder_chars else half_to_full(row[2]),
+                    )
+                )
 
         # 追加数据从原始字符串区尾部开始
         write_cursor = string_section_start + original_string_len
         for pointer_pos, s, trans_str in rows:
-            new_bytes = s.replace(break_line_char, "\n").encode(default_encode) + b"\x00"
+            new_bytes = s.replace(break_line_char, "\n").replace("＠ｎ", "\n").encode(default_encode) + b"\x00"
 
             # 有翻译就应用翻译到最终文件
             if trans_str:
-                new_bytes = trans_str.replace(break_line_char, "\n").encode(default_encode) + b"\x00"
+                new_bytes = trans_str.replace(break_line_char, "\n").replace("＠ｎ", "\n").encode(default_encode) + b"\x00"
 
             data.extend(new_bytes)
             new_offset = write_cursor - string_section_start  # 字符串区内相对偏移

@@ -20,10 +20,25 @@ hold_chars = (
 )
 
 
+def half_to_full(text):
+    result = []
+    for char in text:
+        code = ord(char)
+        if char == '·':
+            result.append('・')
+        elif 33 <= code <= 126:
+            result.append(chr(code + 65248))
+        elif code == 32:
+            result.append(chr(12288))
+        else:
+            result.append(char)
+    return ''.join(result)
+
+
 def modify_font_preserve_structure(
         original_abf_path, original_png_path,
         char_list, output_abf_path, output_png_path,
-        font_path, x_off, y_off
+        font_path, x_off, y_off, holder_char
 ):
     """
     修改原始 ABF 和 PNG 文件，保持原始文件结构不变
@@ -83,7 +98,7 @@ def modify_font_preserve_structure(
         try:
             original_char = chr(int.from_bytes(unicode_bytes, 'big'))
 
-            if original_char in hold_chars:
+            if holder_char and original_char in hold_chars:
                 pos += 32
                 continue
 
@@ -186,7 +201,7 @@ def modify_font_preserve_structure(
         clean_left = max(0, column)
         clean_top = max(0, row)
         clean_right = min(img_width, column + width)
-        clean_bottom = min(img_height, row + height)
+        clean_bottom = min(img_height, row + height + 1)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
         # 获取新字符的bbox
@@ -230,7 +245,7 @@ def modify_font_preserve_structure(
         clean_left = max(0, column - 2)
         clean_top = max(0, row - 2)
         clean_right = min(img_width, column + width - 1)
-        clean_bottom = min(img_height, row + height - 1)
+        clean_bottom = min(img_height, row + height + 1)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
     # 验证文件大小不变
@@ -258,7 +273,7 @@ def modify_font_preserve_structure(
     return True
 
 
-def parse_use_chars():
+def parse_use_chars(holder_chars):
     all_chars = []
     folder = Path("scripts/extract")
     for csv_file in folder.glob("*.csv"):
@@ -270,6 +285,11 @@ def parse_use_chars():
                     if len(row) >= 3:
                         text = row[1].strip()
                         trans_text = row[2].strip()
+
+                        if not holder_chars:
+                            text = half_to_full(text)
+                            trans_text = half_to_full(trans_text)
+
                         if trans_text:
                             text = trans_text
 
@@ -288,6 +308,11 @@ def parse_use_chars():
                     if len(row) >= 3:
                         text = row[1].strip()
                         trans_text = row[2].strip()
+
+                        if not holder_chars:
+                            text = half_to_full(text)
+                            trans_text = half_to_full(trans_text)
+
                         if trans_text:
                             text = trans_text
 
@@ -304,28 +329,34 @@ font_config = {
         "ttf": "font/ttf/WenQuanDengKuanWeiMiHei.ttf",
         "x_offset": 1,
         "y_offset": 2,
+        "holder_char": False
     },
 
     "ResourceHan": {
         "ttf": "font/ttf/ResourceHanRoundedCN-Normal.ttf",
         "x_offset": 1,
         "y_offset": 8,
+        "holder_char": True
     }
 }
+
+choose_font = "WenQuan"
 
 if __name__ == "__main__":
     # 配置参数
     ORIGINAL_ABF = "font/origin/font_j24x24.abf"
     ORIGINAL_PNG = "font/origin/font_j24x24_0.png"
-    font_info = font_config["ResourceHan"]
+    font_info = font_config[choose_font]
     NEW_FONT = font_info["ttf"]
     OUTPUT_ABF = "font_j24x24.abf"
     OUTPUT_PNG = "images/modified/font/font_j24x24/font_j24x24_0.png"
 
-    all_chars = parse_use_chars()
+    need_holder_char = font_info["holder_char"]
+
+    all_chars = parse_use_chars(need_holder_char)
 
     # 去重并排序
-    char_list = sorted(set(all_chars) - set(hold_chars))
+    char_list = sorted(set(all_chars) - set(hold_chars if need_holder_char else []))
     print(f"Characters: {char_list}")
     print(f"Characters to replace: {len(char_list)}")
 
@@ -344,5 +375,6 @@ if __name__ == "__main__":
         OUTPUT_PNG,
         NEW_FONT,
         font_info["x_offset"],
-        font_info["y_offset"]
+        font_info["y_offset"],
+        need_holder_char
     )
