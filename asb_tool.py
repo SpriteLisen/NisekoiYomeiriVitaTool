@@ -278,7 +278,8 @@ class ASBStringTool:
             end_at = start_at + sec_len
             cur = start_at
             opcode = get8(data, cur)
-            while opcode != 0x2b and cur < end_at:
+            # while opcode != 0x2b and cur < end_at:
+            while cur < end_at:
                 if opcode in (0x01, 0x03, 0x04, 0x08):
                     function_arg_pos.append(cur + 1)
                     function_args.append(self.get32(data, cur + 1))
