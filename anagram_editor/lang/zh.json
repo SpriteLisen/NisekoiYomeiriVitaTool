@@ -5,6 +5,8 @@
   "log_title": "日志",
   "button_title": "编辑操作",
   "answer_list_title": "答案列表",
+  "original_answer_title": "原文",
+  "translated_answer_title": "译文",
 
   "edit_answer_title_dialog_title": "编辑标题",
   "edit_answer_title_dialog_hint": "编辑标题（最多16个字符）:",
@@ -12,6 +14,9 @@
   "edit_answer_char_dialog_hint": "编辑字符（最多1个字符）:",
   "edit_answer_dialog_title": "编辑答案",
   "edit_answer_dialog_hint": "编辑答案（最多7个字符）:",
+
+  "delete_this_char": "删除该字",
+  "add_char": "增加字符",
 
   "export_product_success_hint": "导出产物 {0} 完毕！\n请自行打开文件验收！",
   "delete_char_less_answer_count_hint": "删除失败！\n备选字符数不能少于答案数量！",

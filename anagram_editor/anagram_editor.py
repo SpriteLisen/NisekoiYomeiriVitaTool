@@ -1,5 +1,6 @@
 import os
 import csv
+import copy
 import json
 import locale
 import platform
@@ -157,6 +158,7 @@ class StrArea:
 
 now_edit_index = 0
 
+origin_game_anagram: list[Anagram] = []
 game_anagram: list[Anagram] = []
 
 pre_data: bytearray = None
@@ -197,6 +199,9 @@ def parse_meta_info():
             per_game_data = gdata_bytes[start_pos:end_pos]
             anagram = Anagram(per_game_data, str_area.str_table)
             game_anagram.append(anagram)
+
+        global origin_game_anagram
+        origin_game_anagram = copy.deepcopy(game_anagram)
 
         app_log(lang_table["log_decode_anagram_success"])
 
@@ -655,6 +660,9 @@ class ImageActionPanel:
 
     char_bg_half_width = 45
 
+    TYPE_ORIGIN = 0
+    TYPE_TRANSLATE = 1
+
     min_x = 45
     min_y = 100
     max_x = 915
@@ -669,6 +677,52 @@ class ImageActionPanel:
 
         def is_hit(self, x, y):
             return self.min_x <= x <= self.max_x and self.min_y <= y <= self.max_y
+
+    def draw_indicator(
+            self, main_img, draw: ImageDraw.Draw,
+            radius, fill=None,
+    ):
+        x1, y1, x2, y2 = (
+            AnagramEditorApp.IMAGE_WIDTH - 100,
+            AnagramEditorApp.IMAGE_HEIGHT - 40,
+            AnagramEditorApp.IMAGE_WIDTH,
+            AnagramEditorApp.IMAGE_HEIGHT
+        )
+        width_px = x2 - x1
+        height_px = y2 - y1
+
+        locate_x, locate_y = (
+            AnagramEditorApp.IMAGE_WIDTH - 100,
+            AnagramEditorApp.IMAGE_HEIGHT - 40,
+        )
+
+        temp_img = Image.new('RGBA', (width_px, height_px), (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+
+        temp_draw.rounded_rectangle([0, 0, width_px, height_px],
+                                    radius=radius, fill=fill, outline=None)
+
+        temp_draw.rectangle([width_px - radius, 0, width_px, radius],
+                            fill=fill, outline=None)
+        temp_draw.rectangle([width_px - radius, height_px - radius, width_px, height_px],
+                            fill=fill, outline=None)
+
+        text = ""
+        if self.window_type == ImageActionPanel.TYPE_ORIGIN:
+            text = lang_table["original_answer_title"]
+        else:
+            text = lang_table["translated_answer_title"]
+
+        font = ImageFont.truetype(f"{self.resource_dir}WenQuanDengKuanWeiMiHei.ttf", 18)
+        text_bbox = temp_draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+        text_x = (width_px - text_width) / 2
+        text_y = (height_px - text_height) / 2
+        text_color = (0, 0, 0, 200)
+        temp_draw.text((text_x, text_y), text, fill=text_color, font=font)
+
+        main_img.paste(temp_img, (locate_x, locate_y), temp_img)
 
     def create_main_area(self):
         bg_img = Image.open(self.bg_img_path).convert("RGBA")
@@ -690,10 +744,16 @@ class ImageActionPanel:
         char_bg_img = Image.open(self.char_bg_img_path).convert("RGBA")
         self.bubble_entry = []
 
-        if game_anagram:
+        now_game_anagram = None
+        if self.window_type == ImageActionPanel.TYPE_ORIGIN:
+            now_game_anagram = origin_game_anagram
+        else:
+            now_game_anagram = game_anagram
+
+        if now_game_anagram:
             char_font = ImageFont.truetype(f"{self.resource_dir}WenQuanDengKuanWeiMiHei.ttf", 38)
 
-            for char_entry in game_anagram[now_edit_index].charText:
+            for char_entry in now_game_anagram[now_edit_index].charText:
                 if not char_entry.is_empty():
                     show_x = char_entry.iPosX - self.char_bg_half_width
                     show_y = char_entry.iPosY - self.char_bg_half_width
@@ -715,6 +775,11 @@ class ImageActionPanel:
                         fill='#555555', font=char_font, anchor='mm'
                     )
 
+        self.draw_indicator(
+            main_img, main_draw,
+            radius=16, fill=(255, 255, 255, 200),
+        )
+
         self.main_img = ImageTk.PhotoImage(main_img)
 
     def redraw(self):
@@ -722,46 +787,58 @@ class ImageActionPanel:
         self.image_label.config(image=self.main_img)
         self.image_label.image = self.main_img
 
-    def __init__(self, root_window, main_frame, on_title_changed):
+    def __init__(self, root_window, main_frame, on_title_changed, window_type):
         self.root_window = root_window
         self.main_frame = main_frame
         self.title_text = ""
         self.on_title_changed = on_title_changed
+        self.window_type = window_type
 
         self.image_frame = tk.Frame(
             main_frame, width=AnagramEditorApp.IMAGE_WIDTH,
             height=AnagramEditorApp.IMAGE_HEIGHT, bg='white',
             relief=tk.SUNKEN, borderwidth=2
         )
-        self.image_frame.pack(side=tk.LEFT, padx=(0, 10))
+        if self.window_type == ImageActionPanel.TYPE_ORIGIN:
+            self.image_frame.pack(side=tk.TOP, padx=(0, 5))
+        else:
+            self.image_frame.pack(side=tk.BOTTOM, padx=(5, 0))
 
         self.create_main_area()
 
         # Add main img
-        self.image_label = tk.Label(self.image_frame, image=self.main_img, bg='white')
-        self.image_label.pack(fill=tk.BOTH, expand=True)
+        if self.window_type == ImageActionPanel.TYPE_ORIGIN:
+            self.image_label = tk.Label(self.image_frame, image=self.main_img, bg='white')
+            self.image_label.pack(fill=tk.BOTH, expand=True)
+        else:
+            self.image_label = tk.Label(self.image_frame, image=self.main_img, bg='white')
+            self.image_label.pack(fill=tk.BOTH, expand=True)
 
-        self.delete_char_menu = tk.Menu(self.root_window, tearoff=0)
-        self.delete_char_menu.add_command(
-            label="删除该字",
-            command=self.on_delete_char
-        )
+        if self.window_type == ImageActionPanel.TYPE_TRANSLATE:
+            self.delete_char_menu = tk.Menu(self.root_window, tearoff=0)
+            self.delete_char_menu.add_command(
+                label=lang_table['delete_this_char'],
+                command=self.on_delete_char
+            )
 
-        self.add_char_menu = tk.Menu(self.root_window, tearoff=0)
-        self.add_char_menu.add_command(
-            label="增加字符",
-            command=self.on_add_char
-        )
+            self.add_char_menu = tk.Menu(self.root_window, tearoff=0)
+            self.add_char_menu.add_command(
+                label=lang_table['add_char'],
+                command=self.on_add_char
+            )
 
-        self.image_label.bind('<Button-1>', self.on_main_img_click)
-        self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
-        self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
-        self.image_label.bind('<Button-3>', self.on_right_click)
-        self.image_label.bind('<Button-2>', self.on_right_click)  # macOS mouse right click use Magic Trackpad
-        self.image_label.bind('<Double-Button-1>', self.on_double_click)
+            self.image_label.bind('<Button-1>', self.on_main_img_click)
+            self.image_label.bind('<B1-Motion>', self.on_mouse_drag)
+            self.image_label.bind('<ButtonRelease-1>', self.on_mouse_up)
+            self.image_label.bind('<Button-3>', self.on_right_click)
+            self.image_label.bind('<Button-2>', self.on_right_click)  # macOS mouse right click use Magic Trackpad
+            self.image_label.bind('<Double-Button-1>', self.on_double_click)
 
     def refresh_now_anagram_ui(self):
-        self.title_text = game_anagram[now_edit_index].strTitle
+        if self.window_type == ImageActionPanel.TYPE_ORIGIN:
+            self.title_text = origin_game_anagram[now_edit_index].strTitle
+        else:
+            self.title_text = game_anagram[now_edit_index].strTitle
 
         self.redraw()
 
@@ -781,25 +858,28 @@ class ImageActionPanel:
                     self.drag_start_y = y
 
     def on_mouse_drag(self, event):
-        if self.dragging and self.dragging_entry:
-            offset_x = self.drag_start_x - event.x
-            offset_y = self.drag_start_y - event.y
+        try:
+            if self.dragging and self.dragging_entry:
+                offset_x = self.drag_start_x - event.x
+                offset_y = self.drag_start_y - event.y
 
-            dragging_item = game_anagram[now_edit_index].charText[self.dragging_index]
+                dragging_item = game_anagram[now_edit_index].charText[self.dragging_index]
 
-            new_x = dragging_item.iPosX - offset_x
-            new_y = dragging_item.iPosY - offset_y
+                new_x = dragging_item.iPosX - offset_x
+                new_y = dragging_item.iPosY - offset_y
 
-            new_x = max(ImageActionPanel.min_x, min(new_x, ImageActionPanel.max_x))
-            new_y = max(ImageActionPanel.min_y, min(new_y, ImageActionPanel.max_y))
+                new_x = max(ImageActionPanel.min_x, min(new_x, ImageActionPanel.max_x))
+                new_y = max(ImageActionPanel.min_y, min(new_y, ImageActionPanel.max_y))
 
-            dragging_item.iPosX = new_x
-            dragging_item.iPosY = new_y
+                dragging_item.iPosX = new_x
+                dragging_item.iPosY = new_y
 
-            self.drag_start_x = dragging_item.iPosX
-            self.drag_start_y = dragging_item.iPosY
+                self.drag_start_x = dragging_item.iPosX
+                self.drag_start_y = dragging_item.iPosY
 
-            self.redraw()
+                self.redraw()
+        except Exception:
+            pass
 
     def on_mouse_up(self, event):
         self.dragging = False
@@ -1023,38 +1103,93 @@ class RightPanel:
         )
         answer_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-        # 答案列表框
-        self.answer_listbox = tk.Listbox(
-            answer_container,
-            # yscrollcommand=answer_scrollbar.set,
-            font=(AnagramEditorApp.FONT_FAMILY, 13),
+        # 上半部分：原始答案
+        original_frame = tk.Frame(answer_container, bg='white')
+        original_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 2))
+
+        # 原始答案标题
+        original_title = tk.Label(
+            original_frame,
+            text=lang_table["original_answer_title"],
+            font=(AnagramEditorApp.FONT_FAMILY, 12, 'bold'),
+            bg='#4a7a8c',
+            fg='white',
+            pady=3
+        )
+        original_title.pack(fill=tk.X)
+
+        # 原始答案 Listbox
+        original_container = tk.Frame(original_frame, bg='white')
+        original_container.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        self.original_answer_listbox = tk.Listbox(
+            original_container,
+            # yscrollcommand=original_scrollbar.set,
+            font=(AnagramEditorApp.FONT_FAMILY, 12),
             bg='white',
             fg='black',
             relief=tk.FLAT,
         )
-        self.answer_listbox.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        self.original_answer_listbox.pack(fill=tk.BOTH, expand=True)
 
-    def rebuild_data(self, data):
+        # 下半部分：译文答案
+        translated_frame = tk.Frame(answer_container, bg='white')
+        translated_frame.pack(fill=tk.BOTH, expand=True, pady=(2, 0))
+
+        # 译文答案标题
+        translated_title = tk.Label(
+            translated_frame,
+            text=lang_table["translated_answer_title"],
+            font=(AnagramEditorApp.FONT_FAMILY, 13, 'bold'),
+            bg='#8a4a7a',
+            fg='white',
+            pady=3
+        )
+        translated_title.pack(fill=tk.X)
+
+        # 译文答案 Listbox
+        translated_container = tk.Frame(translated_frame, bg='white')
+        translated_container.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        self.translated_answer_listbox = tk.Listbox(
+            translated_container,
+            # yscrollcommand=translated_scrollbar.set,
+            font=(AnagramEditorApp.FONT_FAMILY, 12),
+            bg='white',
+            fg='black',
+            relief=tk.FLAT,
+        )
+        self.translated_answer_listbox.pack(fill=tk.BOTH, expand=True)
+
+    def rebuild_data(self, origin_data, data):
         # 清空列表并添加数据
-        self.answer_listbox.delete(0, tk.END)
+        self.original_answer_listbox.delete(0, tk.END)
+        for origin_answer in origin_data:
+            if origin_answer:
+                self.original_answer_listbox.insert(tk.END, origin_answer)
+
+        self.translated_answer_listbox.delete(0, tk.END)
         for answer in data:
             if answer:
-                self.answer_listbox.insert(tk.END, answer)
+                self.translated_answer_listbox.insert(tk.END, answer)
 
         # 绑定双击事件
-        self.answer_listbox.bind('<Double-Button-1>', self.on_answer_double_click)
+        self.translated_answer_listbox.bind('<Double-Button-1>', self.on_answer_double_click)
 
     def refresh_now_anagram_ui(self):
-        self.rebuild_data(game_anagram[now_edit_index].strAnswer)
+        self.rebuild_data(
+            origin_data=origin_game_anagram[now_edit_index].strAnswer,
+            data=game_anagram[now_edit_index].strAnswer
+        )
 
     def on_answer_double_click(self, event):
         # 获取点击的索引
-        index = self.answer_listbox.nearest(event.y)
+        index = self.translated_answer_listbox.nearest(event.y)
         if index < 0:
             return
 
         # 获取原始文本
-        original_text = self.answer_listbox.get(index)
+        original_text = self.translated_answer_listbox.get(index)
 
         # 创建编辑窗口
         self.show_answer_edit_dialog(index, original_text)
@@ -1065,8 +1200,8 @@ class RightPanel:
         def on_text_changed(new_text):
             if self.on_answer_changed(index, new_text):
                 # 删除原项目，插入新项目
-                self.answer_listbox.delete(index)
-                self.answer_listbox.insert(index, new_text)
+                self.translated_answer_listbox.delete(index)
+                self.translated_answer_listbox.insert(index, new_text)
 
         EditTextDialog(
             root_window=self.root_window,
@@ -1115,7 +1250,7 @@ class AnagramEditorApp:
     IMAGE_HEIGHT = 540
 
     WINDOW_WIDTH = IMAGE_WIDTH + 460  # 960 + 200 + 260
-    WINDOW_HEIGHT = IMAGE_HEIGHT + 40  # # 540 + 上下边距
+    WINDOW_HEIGHT = IMAGE_HEIGHT * 2 + 40  # # 540 * 2 + 上下边距
 
     def __init__(self):
         self.is_changed = False
@@ -1139,7 +1274,16 @@ class AnagramEditorApp:
             main_frame=self.main_frame,
             on_anagram_item_selected=self.on_anagram_item_selected
         )
-        self.image_action_panel = ImageActionPanel(self.root, self.main_frame, self.on_title_changed)
+
+        # 创建一个垂直容器放两个图片面板
+        self.image_container = tk.Frame(self.main_frame, bg='white')
+        self.image_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+        self.image_origin_action_panel = ImageActionPanel(self.root, self.image_container, self.on_title_changed,
+                                                          ImageActionPanel.TYPE_ORIGIN)
+        self.image_translate_action_panel = ImageActionPanel(self.root, self.image_container, self.on_title_changed,
+                                                             ImageActionPanel.TYPE_TRANSLATE)
+
         self.right_panel = RightPanel(self.root, self.main_frame, self.on_answer_changed)
 
         global app_log
@@ -1159,7 +1303,8 @@ class AnagramEditorApp:
         self.root.mainloop()
 
     def refresh_now_anagram_ui(self):
-        self.image_action_panel.refresh_now_anagram_ui()
+        self.image_origin_action_panel.refresh_now_anagram_ui()
+        self.image_translate_action_panel.refresh_now_anagram_ui()
         self.right_panel.refresh_now_anagram_ui()
 
     def center_window(self, width, height):

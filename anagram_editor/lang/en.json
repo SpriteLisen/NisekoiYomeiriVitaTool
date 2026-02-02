@@ -5,6 +5,8 @@
   "log_title": "Log",
   "button_title": "Edit Operations",
   "answer_list_title": "Answer List",
+  "original_answer_title": "Original",
+  "translated_answer_title": "Translate",
 
   "edit_answer_title_dialog_title": "Edit Title",
   "edit_answer_title_dialog_hint": "Edit title (max 16 characters):",
@@ -12,6 +14,9 @@
   "edit_answer_char_dialog_hint": "Edit character (max 1 character):",
   "edit_answer_dialog_title": "Edit Answer",
   "edit_answer_dialog_hint": "Edit answer (max 7 characters):",
+
+  "delete_this_char": "Delete",
+  "add_char": "Add",
 
   "export_product_success_hint": "Export product {0} completed!\nPlease open the file to verify!",
   "delete_char_less_answer_count_hint": "Deletion failed!\nCandidate characters cannot be fewer than the number of answers!",
