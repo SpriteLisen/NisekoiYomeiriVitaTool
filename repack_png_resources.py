@@ -1,3 +1,4 @@
+import sys
 import platform
 import subprocess
 from pathlib import Path
@@ -180,8 +181,7 @@ def process_png_files(input_dir, output_dir):
 def main():
     input_directory = "images/modified"
     # input_directory = "images/origin"
-    # output_directory = "images/rebuild"
-    output_directory = "game_data/all_extract"
+    output_directory = sys.argv[1] if sys.argv[1] else "images/rebuild"
 
     # 处理PNG文件
     process_png_files(input_directory, output_directory)

@@ -1,4 +1,6 @@
+import os
 import csv
+import sys
 from pathlib import Path
 from fontTools.ttLib.ttFont import TTFont
 from PIL import Image, ImageDraw, ImageFont
@@ -343,12 +345,14 @@ font_config = {
 choose_font = "WenQuan"
 
 if __name__ == "__main__":
+    output_dir = sys.argv[1] if sys.argv[1] else "images/modified/font/font_j24x24"
+
     # 配置参数
     ORIGINAL_ABF = "font/origin/font_j24x24.abf"
     ORIGINAL_PNG = "font/origin/font_j24x24_0.png"
     font_info = font_config[choose_font]
     NEW_FONT = font_info["ttf"]
-    OUTPUT_ABF = "font_j24x24.abf"
+    OUTPUT_ABF = os.path.join(output_dir, "font_j24x24.abf")
     OUTPUT_PNG = "images/modified/font/font_j24x24/font_j24x24_0.png"
 
     need_holder_char = font_info["holder_char"]

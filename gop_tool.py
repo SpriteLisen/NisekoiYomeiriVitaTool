@@ -1,8 +1,10 @@
 import os
 import re
+import sys
 import csv
 import sys
 import glob
+import shutil
 from pathlib import Path
 from make_abf import font_config, choose_font, half_to_full
 
@@ -272,6 +274,12 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
         print(f"  新文件大小: {len(new_file_data)} 字节")
         print("-" * 80)
 
+    # Copy TalkAnagram
+    shutil.copy(
+        os.path.join("anagram_editor", "export", "gop_talkanagram.gop"),
+        os.path.join(output_folder, "gop_talkanagram.gop")
+    )
+
 
 def usage():
     print("Usage:")
@@ -283,7 +291,7 @@ def main():
     # 配置路径
     origin_folder = "gop_data/origin"
     extract_folder = "gop_data/extract"
-    output_folder = "gop_data/rebuild"
+    output_folder = sys.argv[2] if sys.argv[2] else "gop_data/rebuild"
 
     # 创建必要的文件夹
     for folder in [origin_folder, extract_folder, output_folder]:
