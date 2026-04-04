@@ -202,7 +202,7 @@ def repack_gop_files(gop_folder, csv_folder, output_folder):
             # 添加字符串内容和 null 终止符
             trans_text = csv_translate[idx]
 
-            if not need_holder_chars:
+            if not need_holder_chars and "systemtext" not in filename:
                 # string = half_to_full(string)
                 trans_text = half_to_full(trans_text)
 

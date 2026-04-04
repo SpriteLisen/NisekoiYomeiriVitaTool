@@ -342,7 +342,7 @@ font_config = {
     }
 }
 
-choose_font = "WenQuan"
+choose_font = "ResourceHan"
 
 if __name__ == "__main__":
     output_dir = sys.argv[1] if sys.argv[1] else "images/modified/font/font_j24x24"
