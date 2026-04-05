@@ -1259,7 +1259,7 @@ class AnagramEditorApp:
         self.icon_img = tk.PhotoImage(file="resources/icon.png")
         self.root.iconphoto(True, self.icon_img)
 
-        self.root.resizable(False, False)
+        # self.root.resizable(False, False)
 
         self.center_window(
             AnagramEditorApp.WINDOW_WIDTH,
@@ -1299,6 +1299,9 @@ class AnagramEditorApp:
             lang_table["log_load_default_data_success"].format(f"{now_edit_index + 1:02d}")
         )
         self.refresh_now_anagram_ui()
+
+        # Compact macOS
+        self.root.after(100, lambda: self.root.resizable(False, False))
 
         self.root.mainloop()
 
