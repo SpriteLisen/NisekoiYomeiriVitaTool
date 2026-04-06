@@ -345,8 +345,8 @@ class ASBStringTool:
         string_section_start = self.get32(data, 0x2C + 1 * 8)
         original_string_len = self.get32(data, 0x30 + 1 * 8)
 
-        # 读取尾部 offset 0x3C~0x3D
-        tail_offset = self.get16(data, 0x3C)
+        # 读取尾部 offset 0x3C~0x3F
+        tail_offset = self.get32(data, 0x3C)
         if tail_offset < len(data) - 1:
             tail_data = data[tail_offset:]  # 尾部数据
             data = data[:tail_offset]  # 截断原始尾部
