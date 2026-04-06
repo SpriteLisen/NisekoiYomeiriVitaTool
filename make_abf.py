@@ -5,7 +5,7 @@ from pathlib import Path
 from fontTools.ttLib.ttFont import TTFont
 from PIL import Image, ImageDraw, ImageFont
 
-font_size = 24
+font_size = 23
 
 hold_chars = (
     ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}'
@@ -337,7 +337,7 @@ font_config = {
     "ResourceHan": {
         "ttf": "font/ttf/ResourceHanRoundedCN-Normal.ttf",
         "x_offset": 1,
-        "y_offset": 8,
+        "y_offset": 7,
         "holder_char": True
     }
 }
