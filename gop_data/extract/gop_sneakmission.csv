@@ -26,7 +26,7 @@
 0x0414,R_SneakMission008,
 0x0418,R_SneakMission009,
 0x041C,R_SneakMission010,
-0x0420,カワリミ,《伪装》
+0x0420,カワリミ,《替身》
 0x0424,クロードがいつにも増しておかしい@n廊下の反対側までたどり着け！,克劳德比平时更加反常@n想办法到达走廊的另一端！
 0x0428,R_SneakMission011,
 0x042C,R_SneakMission012,
@@ -38,7 +38,7 @@
 0x0444,R_SneakMission018,
 0x0448,R_SneakMission019,
 0x044C,R_SneakMission020,
-0x0450,スクエル,《逃离》
+0x0450,スクエル,《救出》
 0x0454,今ならまだ間に合う……！@n振り返らずに、千棘の元へ！！,现在还来得及……！@n不要回头，快去千棘身边！！
 0x0458,hlw,
 0x045C,R_SneakMission021,
@@ -103,7 +103,7 @@
 0x0548,R_SneakMission068,
 0x054C,R_SneakMission069,
 0x0550,R_SneakMission070,
-0x0554,クダサイ,《请给我》
+0x0554,クダサイ,《请给》
 0x0558,メガネワールドに明日はない@n手段を問わず　メガネを手に入れろ！！,眼镜世界没有明天@n不择手段也要得到眼镜！！
 0x055C,R_SneakMission071,
 0x0560,R_SneakMission072,
@@ -117,7 +117,7 @@
 0x0580,R_SneakMission078,
 0x0584,R_SneakMission079,
 0x0588,R_SneakMission080,
-0x058C,スキデス,《喜欢你》
+0x058C,スキデス,《喜欢》
 0x0590,一条楽への異常な愛情：なぜ彼は追い回されるのか@n追っ手を逃れて校門から落ち延びろ！,对一条乐的异常爱恋：为何他会被穷追不舍@n甩开追兵从校门逃脱！
 0x0594,R_SneakMission081,
 0x0598,frm,
@@ -130,7 +130,7 @@
 0x05B4,R_SneakMission088,
 0x05B8,R_SneakMission089,
 0x05BC,R_SneakMission090,
-0x05C0,オマエガ,《都是你》
+0x05C0,オマエガ,《你丫》
 0x05C4,すべてはタイミングのせい……@n荒ぶる先輩たちから逃げ延びろ！！,一切都是时机的错……@n从狂暴的前辈们手中逃脱！！
 0x05C8,R_SneakMission091,
 0x05CC,R_SneakMission092,
