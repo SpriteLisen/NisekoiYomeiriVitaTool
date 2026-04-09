@@ -21,6 +21,19 @@ hold_chars = (
     'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝～￠￡￢￣￥\n'
 )
 
+redraw_chars = ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ")
+
+replace_char = {
+    "ａ": "a", "ｂ": "b", "ｃ": "c", "ｄ": "d", "ｅ": "e", "ｆ": "f", "ｇ": "g", "ｈ": "h", "ｉ": "i", "ｊ": "j",
+    "ｋ": "k", "ｌ": "l", "ｍ": "m", "ｎ": "n", "ｏ": "o", "ｐ": "p", "ｑ": "q", "ｒ": "r", "ｓ": "s", "ｔ": "t",
+    "ｕ": "u", "ｖ": "v", "ｗ": "w", "ｘ": "x", "ｙ": "y", "ｚ": "z",
+
+    "Ａ": "A", "Ｂ": "B", "Ｃ": "C", "Ｄ": "D", "Ｅ": "E", "Ｆ": "F", "Ｇ": "G", "Ｈ": "H", "Ｉ": "I", "Ｊ": "J",
+    "Ｋ": "K", "Ｌ": "L", "Ｍ": "M", "Ｎ": "N", "Ｏ": "O", "Ｐ": "P", "Ｑ": "Q", "Ｒ": "R", "Ｓ": "S", "Ｔ": "T",
+    "Ｕ": "U", "Ｖ": "V", "Ｗ": "W", "Ｘ": "X", "Ｙ": "Y", "Ｚ": "Z",
+}
+
 
 def half_to_full(text):
     result = []
@@ -46,7 +59,6 @@ def modify_font_preserve_structure(
     修改原始 ABF 和 PNG 文件，保持原始文件结构不变
     """
 
-    # 读取原始文件
     with open(original_abf_path, "rb") as f:
         original_abf = bytearray(f.read())
 
@@ -54,14 +66,11 @@ def modify_font_preserve_structure(
     new_image = original_image.copy()
     draw = ImageDraw.Draw(new_image)
 
-    # 获取图片尺寸
     img_width, img_height = new_image.size
     print(f"Image size: {img_width}x{img_height}")
 
-    # 加载新字体
     new_font = ImageFont.truetype(font_path, font_size)
 
-    # 找到 body 开始位置
     body_start_pos = 0
     pos = 0
     while pos < len(original_abf):
@@ -76,14 +85,13 @@ def modify_font_preserve_structure(
 
     print(f"Body starts at: 0x{body_start_pos:X}")
 
-    # 解析原始字符数据并按行列坐标排序
     char_data = []
     pos = body_start_pos
 
     min_char_data = []
+    redraw_char_data = []
 
     while pos < len(original_abf):
-        # 检查是否到达文件尾
         if pos + 8 <= len(original_abf):
             try:
                 possible_end = original_abf[pos:pos + 8].decode("utf-8", errors='ignore')
@@ -99,10 +107,6 @@ def modify_font_preserve_structure(
         unicode_bytes = original_abf[pos:pos + 4]
         try:
             original_char = chr(int.from_bytes(unicode_bytes, 'big'))
-
-            if holder_char and original_char in hold_chars:
-                pos += 32
-                continue
 
             # 提取所有属性
             column = int.from_bytes(original_abf[pos + 4:pos + 6], 'big')
@@ -125,6 +129,16 @@ def modify_font_preserve_structure(
                 'text_space': text_space,
                 'segment_data': bytearray(original_abf[pos:pos + 32])
             }
+
+            if original_char in redraw_chars:
+                pos += 32
+                print(f"Redraw -> min width: {width} => {original_char}")
+                redraw_char_data.append(entry_info)
+                continue
+
+            if holder_char and original_char in hold_chars:
+                pos += 32
+                continue
 
             if width < 23:
                 pos += 32
@@ -161,7 +175,6 @@ def modify_font_preserve_structure(
     # 用于记录已使用的 Unicode 码点，避免重复
     used_unicode_points = []
 
-    # 第一阶段：为每个新字符寻找合适的位置（只使用第二行及以后的位置）
     print(f"\nMatching {len(char_list)} characters to suitable slots (first row skipped)...")
 
     matched_slots = []
@@ -177,22 +190,7 @@ def modify_font_preserve_structure(
             f"Matched '{new_char}' to slot {now_index + 1} => {use_char['original_char']} , width: {use_char['width']} , height: {use_char['height']}")
         now_index += 1
 
-    # 第二阶段：替换使用的字符
-    print(f"\nReplacing {len(matched_slots)} characters with simple drawing method...")
-    final_chars = []
-    for char_info, new_char in matched_slots:
-        final_chars.append(new_char)
-        new_unicode = ord(new_char)
-
-        print(f"Replacing '{char_info['original_char']}' with '{new_char}'")
-
-        # 1. 修改ABF：只替换 Unicode 码点
-        file_pos = char_info['file_position']
-        new_unicode_bytes = new_unicode.to_bytes(4, 'big')
-        new_abf[file_pos:file_pos + 4] = new_unicode_bytes
-        used_unicode_points.append(new_unicode)
-
-        # 2. 修改 PNG：在原始位置绘制新字符
+    def draw_char(char_info, draw_char, is_redraw=False):
         column = char_info['column']
         row = char_info['row']
         width = char_info['width']
@@ -203,6 +201,8 @@ def modify_font_preserve_structure(
         clean_left = max(0, column)
         clean_top = max(0, row)
         clean_right = min(img_width, column + width)
+        # if is_redraw:
+        #     clean_right += 2
         clean_bottom = min(img_height, row + height + 1)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
@@ -212,16 +212,71 @@ def modify_font_preserve_structure(
         # char_width = right - left
         # char_height_actual = bottom - top
 
-        x_offset = column - x_off
-        y_offset = row - y_off
+        # x_offset = column - x_off
+        # y_offset = row - y_off
 
-        # 直接绘制字符
-        draw.text((x_offset, y_offset), new_char, fill=(255, 255, 255, 255), font=new_font)
-        print(f"  Drawn at: x={x_offset}, y={y_offset}")
+        if is_redraw:
+            draw_char = replace_char.get(draw_char, draw_char)
 
-    print(f"final_chars: \n{final_chars}")
+        center_x = column - x_off + width // 2
+        if is_redraw:
+            offset = 0
 
-    # 第三阶段：处理未使用的字符位置（包括第一行和未使用的第二行及以后的位置）
+            if draw_char == "g" or draw_char == 'j':
+                offset = 2
+            elif draw_char == "Q":
+                offset = 1
+
+            center_x = column + offset + width // 2
+
+        center_y = row - y_off + height // 2
+        if is_redraw:
+            if choose_font == "ResourceHan":
+                offset = 2
+                if draw_char == "g" or draw_char == 'j':
+                    offset = 4
+                elif draw_char == "Q":
+                    offset = 3
+                center_y = row - offset + height // 2
+            else:
+                offset = 1
+                if draw_char == "g" or draw_char == 'j':
+                    offset = 3
+                # elif draw_char == "Q":
+                #     offset = 3
+                center_y = row - offset + height // 2
+
+        # 使用 anchor='mm' 让字符中心对齐到指定点
+        draw.text((center_x, center_y), draw_char, fill=(255, 255, 255, 255),
+                  font=new_font, anchor='mm')
+        print(f"  Drawn at: x={center_x}, y={center_y}")
+
+    # Replace chars
+    print(f"\nReplacing {len(matched_slots)} characters with simple drawing method...")
+    final_chars = []
+    for char_info, new_char in matched_slots:
+        final_chars.append(new_char)
+        new_unicode = ord(new_char)
+
+        print(f"Replacing '{char_info['original_char']}' with '{new_char}'")
+
+        # 只替换 Unicode 码点
+        file_pos = char_info['file_position']
+        new_unicode_bytes = new_unicode.to_bytes(4, 'big')
+        new_abf[file_pos:file_pos + 4] = new_unicode_bytes
+        used_unicode_points.append(new_unicode)
+
+        draw_char(char_info, new_char)
+
+    # Redraw Chars
+    for char_info in redraw_char_data:
+        original_char = char_info['original_char']
+        print(f"Redraw => {original_char}")
+        draw_char(char_info, original_char, True)
+
+    print(f"\nfinal_chars: \n{final_chars}")
+
+    # Clear chars
     print(f"\nProcessing unused character slots...")
 
     next_unicode = 0xE000
@@ -239,7 +294,6 @@ def modify_font_preserve_structure(
         used_unicode_points.append(next_unicode)
         next_unicode += 1
 
-        # 清除未使用的位置
         column = char_info['column']
         row = char_info['row']
         width = char_info['width']
@@ -250,7 +304,6 @@ def modify_font_preserve_structure(
         clean_bottom = min(img_height, row + height + 1)
         draw.rectangle([clean_left, clean_top, clean_right, clean_bottom], fill=(0, 0, 0, 0))
 
-    # 验证文件大小不变
     if len(new_abf) != len(original_abf):
         print(f"Warning: File size changed! Original: {len(original_abf)}, New: {len(new_abf)}")
         if len(new_abf) > len(original_abf):
@@ -260,7 +313,6 @@ def modify_font_preserve_structure(
     else:
         print(f"File size preserved: {len(new_abf)} bytes")
 
-    # 保存文件
     with open(output_abf_path, "wb") as f:
         f.write(new_abf)
 
@@ -329,15 +381,15 @@ def parse_use_chars(holder_chars):
 font_config = {
     "WenQuan": {
         "ttf": "font/ttf/WenQuanDengKuanWeiMiHei.ttf",
-        "x_offset": 1,
+        "x_offset": 0,
         "y_offset": 2,
         "holder_char": False
     },
 
     "ResourceHan": {
         "ttf": "font/ttf/ResourceHanRoundedCN-Normal.ttf",
-        "x_offset": 1,
-        "y_offset": 7,
+        "x_offset": 0,
+        "y_offset": 2,
         "holder_char": True
     }
 }
@@ -345,9 +397,11 @@ font_config = {
 choose_font = "ResourceHan"
 
 if __name__ == "__main__":
-    output_dir = sys.argv[1] if sys.argv[1] else "images/modified/font/font_j24x24"
+    try:
+        output_dir = sys.argv[1]
+    except Exception:
+        output_dir = "images/modified/font/font_j24x24"
 
-    # 配置参数
     ORIGINAL_ABF = "font/origin/font_j24x24.abf"
     ORIGINAL_PNG = "font/origin/font_j24x24_0.png"
     font_info = font_config[choose_font]
@@ -359,7 +413,6 @@ if __name__ == "__main__":
 
     all_chars = parse_use_chars(need_holder_char)
 
-    # 去重并排序
     char_list = sorted(set(all_chars) - set(hold_chars if need_holder_char else []))
     print(f"Characters: {char_list}")
     print(f"Characters to replace: {len(char_list)}")
@@ -370,7 +423,6 @@ if __name__ == "__main__":
     supported_chars = [char for char in char_list if ord(char) in support_chars]
     print(f"Supported characters: {len(supported_chars)}")
 
-    # 执行修改
     modify_font_preserve_structure(
         ORIGINAL_ABF,
         ORIGINAL_PNG,
