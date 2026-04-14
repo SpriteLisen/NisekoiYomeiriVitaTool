@@ -228,6 +228,12 @@ def modify_font_preserve_structure(
                 offset = 1
 
             center_x = column + offset + width // 2
+        else:
+            if choose_font == "ResourceHan":
+                if draw_char == '不':
+                    center_x -= 2
+                elif draw_char == '下':
+                    center_x -= 2
 
         center_y = row - y_off + height // 2
         if is_redraw:
