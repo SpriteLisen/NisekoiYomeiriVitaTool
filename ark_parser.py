@@ -1,4 +1,36 @@
 import struct
+from dataclasses import dataclass
+from typing import List, Optional
+
+char_mapping = {
+    "word_ru": "ル",
+    "word_mu": "ム",
+    "word_a": "ア",
+    "word_ba": "バ",
+    "word_bi": "ビ",
+    "word_ga": "ガ",
+    "word_gi": "ギ",
+    "word_i": "ー",
+    "word_ki": "キ",
+    "word_ko": "コ",
+    "word_ku": "ク",
+    "word_me": "メ",
+    "word_n": "ン",
+    "word_nu": "ヌ",
+    "word_o": "オ",
+    "word_ra": "ラ",
+    "word_ri": "リ",
+    "word_shi": "シ",
+    "word_so": "ソ",
+    "word_to": "ト",
+    "word_ya": "ヤ",
+
+    # Extend char
+    "TEXTURE0045": "ア",
+    "TEXTURE0015": "バ",
+    "TEXTURE0024": "ア",
+    "TEXTURE0006": "ン",
+}
 
 
 class TXOSChunk:
@@ -6,26 +38,15 @@ class TXOSChunk:
         self.data = data
 
         self.id = id
-        self.type = struct.unpack("<I", data[0x00:0x04])[0]
-        self.flags = struct.unpack("<I", data[0x04:0x08])[0]
-        self.matrix_a = struct.unpack("<I", data[0x08:0x0C])[0]
-        self.matrix_b = struct.unpack("<I", data[0x0C:0x10])[0]
-        self.screen_x = struct.unpack("<I", data[0x10:0x14])[0]
         self.point_x = struct.unpack("<I", data[0x14:0x18])[0]
         self.point_y = struct.unpack("<I", data[0x18:0x1C])[0]
         self.width = struct.unpack("<I", data[0x1C:0x20])[0]
         self.height = struct.unpack("<I", data[0x20:0x24])[0]
-        self.src_y = struct.unpack("<I", data[0x24:0x28])[0]
-        self.dst_x = struct.unpack("<I", data[0x28:0x2C])[0]
-        self.dst_y = struct.unpack("<I", data[0x2C:0x30])[0]
-        self.blend_mode = struct.unpack("<I", data[0x30:0x34])[0]
         self.str_id = struct.unpack("<I", data[0x34:0x38])[0]
-        self.color = struct.unpack("<I", data[0x38:0x3C])[0]
-        self.child_count = struct.unpack("<I", data[0x3C:0x40])[0]
         self.str = ""
 
     def fill_str(self, value):
-        self.str = value
+        self.str = char_mapping.get(value, value)
 
     def __str__(self):
         return f"""
@@ -37,131 +58,156 @@ class TXOSChunk:
                 height: {self.height},
                 str_id: {self.str_id},
                 str: {self.str},
-                
-                type: {self.type},
-                flags: {self.flags},
-                matrix_a: {self.matrix_a},
-                matrix_b: {self.matrix_b},
-                screen_x: {self.screen_x},
-                src_y: {self.src_y},
-                dst_x: {self.dst_x},
-                dst_y: {self.dst_y},
-                blend_mode: {self.blend_mode},
-                color: {self.color},
-                child_count: {self.child_count},
             ]
         """
 
 
+@dataclass
+class LAY2Header:
+    magic: bytes
+    file_size: int
+    unk0C: int
+    unk10: int
+    unk14: int
+    unk18: int
+    unk1C: int
+    unk20: int
+    item_count: int
+    canvas_width: int
+    canvas_height: int
+    unk30: int
+    items_total_size: int
+    unk38: int
+    unk3C: int
+
+
+@dataclass
 class LAY2Item:
-    """代表 LAY2 中的一个显示项，关联 TXOS 资源"""
+    tag: int  # 固定 0x30
+    instance_id: int  # 实例 ID
+    base_x: int  # X 坐标
+    base_y: int  # Y 坐标
+    item_id: int  # 引用字符串的 idx
+    canvas_width: int  # 画布宽度
+    canvas_height: int  # 画布高度
+    unk1C: int  # 未知
+    unk20: int  # 未知
+    txos_id: int  # TXOS 资源 ID
+    unk28: int  # 未知
+    unk2C: int  # 未知
 
-    def __init__(self, txos_id, x, y, width_or_x2, height_or_y2, priority, ref_w, ref_h):
-        self.txos_id = txos_id  # 关联 TXOS 的 Item ID
+    txos = None
 
-        # 基础布局属性
-        self.base_x = x
-        self.base_y = y
-        # 这两个字段在全屏元素下代表坐标(960, 544)，在普通元素下代表宽高
-        self.layout_w = width_or_x2
-        self.layout_h = height_or_y2
-
-        # 修正后的关键字段
-        self.priority = priority  # 优先级/层级，或者是某些情况下的参考宽
-        self.ref_w = ref_w  # 参考画布宽度 (通常为 960)
-        self.ref_h = ref_h  # 参考画布高度 (通常为 544)
-
-        # 变换属性（由后续的 0x34 块提供修正）
-        self.offset_x = 0
-        self.offset_y = 0
-        self.scale_x = 100
-        self.scale_y = 100
-        self.rgba = 0xFFFFFFFF
-        self.txos_ref = None  # 用于后续关联 TXOS 对象
-
-    def apply_transform(self, offset_x, offset_y, rgba, scale_x, scale_y):
-        self.offset_x = offset_x
-        self.offset_y = offset_y
-        self.rgba = rgba
-        self.scale_x = scale_x
-        self.scale_y = scale_y
+    str_content = ''
 
     def __repr__(self):
-        color_hex = f"{self.rgba:08X}"
-        # 逻辑计算：最终坐标 = 基础坐标 + 偏移
-        final_x = self.base_x + self.offset_x
-        final_y = self.base_y + self.offset_y
-        return (f"<Item TXOS:{self.txos_id} Pos:({final_x}, {final_y}) "
-                f"Layout:({self.layout_w}x{self.layout_h}) Pri:{self.priority} "
-                f"Canvas:{self.ref_w}x{self.ref_h} Color:#{color_hex}>")
+        return (f"LAY2Item(tag=0x{self.tag:02X}, instance_id={self.instance_id}, "
+                f"pos=({self.base_x},{self.base_y}), size={self.canvas_width}x{self.canvas_height}, "
+                f"unk1C={self.unk20}, unk20={self.unk20}, "
+                f"unk28={self.unk28}, unk2C={self.unk2C}, "
+                f"str_id={self.item_id}, str={self.str_content}, "
+                f"txos_id={self.txos_id}, txos_str={self.txos.str if self.txos else ''})")
 
 
-class LAY2Node:
-    def __init__(self, data, node_id=0):
-        self.data = data
-        self.items = []  # 解析出的所有 Item
-        self._parse()
+class LAY2Parser:
+    def __init__(self, data: bytes, area_start_cursor):
+        self._data = data
+        self.area_start_cursor = area_start_cursor
+        self.header: Optional[LAY2Header] = None
+        self.items: List[LAY2Item] = []
 
-    def _parse(self):
-        ptr = 0
-        data_len = len(self.data)
-        item_list = []
+    def parse(self):
+        if len(self._data) < 0x40:
+            raise ValueError("数据太短，无法解析文件头")
 
-        while ptr + 4 <= data_len:
-            # 预读前 4 字节
-            tag = struct.unpack("<I", self.data[ptr:ptr + 4])[0]
+        self._parse_header()
+        # print(f"Item 数量: {self.header.item_count}")
+        # print(f"Item 区域总大小: 0x{self.header.items_total_size:X} ({self.header.items_total_size} 字节)")
 
-            tx_id = 0
-            # --- 情况 3: 修正后的 0x30 块解析 ---
-            if tag == 0x30:
-                tx_id = struct.unpack("<I", self.data[ptr + 0x24: ptr + 0x28])[0]
+        # Item 数据从 0x40 开始
+        ptr = 0x40
+        for i in range(self.header.item_count):
+            if ptr + 0x30 > len(self._data):
+                print(f"警告：数据不足，只解析了 {i} 个 Item")
+                break
+            item = self._parse_item(ptr)
+            self.items.append(item)
+            # print(f"Item {i + 1}: {item}")
+            ptr += 0x30
 
-            # --- 情况 1: 组容器 Header (D8 或 3C) ---
-            # 这种块只有 8 字节，表示一个容器的开始
-            if tag == 0xD8 or tag == 0x3C:
-                child_count = struct.unpack("<I", self.data[ptr + 4:ptr + 8])[0]
-                # print(f"发现容器: Type={hex(tag)}, 子项目数={child_count}")
-                ptr += 8  # 仅跳过 Header，继续解析后面的内容
+        # ptr 现在指向 Item 区域结束，后续是变换层数据（暂不解析）
+        print(f"Item 区域结束于 0x{ptr:X}")
 
-            # --- 情况 2: 变换属性块 (34 00 14 00) ---
-            # 这种块通常是 0x34 (52) 字节
-            elif tag == 0x00140034:
-                # 这里可以解析颜色、缩放等变换
-                # ... 解析逻辑 ...
-                ptr += 0x34
+    def _parse_header(self):
+        magic = self._data[0:8]
+        if magic != b'ARK LAY2':
+            raise ValueError(f"无效魔数: {magic}")
 
-            # --- 情况 3: 真正的显示项 (0x30 块) ---
-            # 我们通过检查 0x2C 偏移处是否为 0x30 来确认
-            elif ptr + 0x30 <= data_len and struct.unpack("<I", self.data[ptr + 0x2C:ptr + 0x30])[0] == 0x30:
-                # 按上面修正的表格解析
-                inst_id = struct.unpack("<I", self.data[ptr:ptr + 4])[0]
-                # tx_id = struct.unpack("<I", self.data[ptr + 4:ptr + 8])[0]
-                x = struct.unpack("<I", self.data[ptr + 8:ptr + 12])[0]
-                y = struct.unpack("<I", self.data[ptr + 12:ptr + 16])[0]
-                w = struct.unpack("<I", self.data[ptr + 16:ptr + 20])[0]
-                h = struct.unpack("<I", self.data[ptr + 20:ptr + 24])[0]
-                cw = struct.unpack("<I", self.data[ptr + 24:ptr + 28])[0]
-                ch = struct.unpack("<I", self.data[ptr + 28:ptr + 32])[0]
+        file_size = struct.unpack("<I", self._data[0x08:0x0C])[0]
+        unk0C = struct.unpack("<I", self._data[0x0C:0x10])[0]
+        unk10 = struct.unpack("<I", self._data[0x10:0x14])[0]
+        unk14 = struct.unpack("<I", self._data[0x14:0x18])[0]
+        unk18 = struct.unpack("<I", self._data[0x18:0x1C])[0]
+        unk1C = struct.unpack("<I", self._data[0x1C:0x20])[0]
+        unk20 = struct.unpack("<I", self._data[0x20:0x24])[0]
+        item_count = struct.unpack("<I", self._data[0x24:0x28])[0]
+        canvas_width = struct.unpack("<I", self._data[0x28:0x2C])[0]
+        canvas_height = struct.unpack("<I", self._data[0x2C:0x30])[0]
+        unk30 = struct.unpack("<I", self._data[0x30:0x34])[0]
+        items_total_size = struct.unpack("<I", self._data[0x34:0x38])[0]
+        unk38 = struct.unpack("<I", self._data[0x38:0x3C])[0]
+        unk3C = struct.unpack("<I", self._data[0x3C:0x40])[0]
 
-                new_item = LAY2Item(tx_id, x, y, w, h, inst_id, cw, ch)
-                item_list.append(new_item)
-                ptr += 0x30
+        self.header = LAY2Header(
+            magic=magic,
+            file_size=file_size,
+            unk0C=unk0C,
+            unk10=unk10,
+            unk14=unk14,
+            unk18=unk18,
+            unk1C=unk1C,
+            unk20=unk20,
+            item_count=item_count,
+            canvas_width=canvas_width,
+            canvas_height=canvas_height,
+            unk30=unk30,
+            items_total_size=items_total_size,
+            unk38=unk38,
+            unk3C=unk3C
+        )
 
-            # --- 情况 4: 空白或对齐填充 ---
-            elif tag == 0:
-                ptr += 4
-            else:
-                # 遇到未知数据，按 4 字节步进尝试重新找回同步
-                ptr += 4
+    def _parse_item(self, ptr: int) -> LAY2Item:
+        """解析单个 Item，固定 0x30 字节"""
+        tag = struct.unpack("<I", self._data[ptr:ptr + 4])[0]
+        if tag != 0x30:
+            print(f"警告：Item 标记异常，期望 0x30，实际 0x{tag:08X} at 0x{ptr:X}")
 
-        self.items = item_list
+        instance_id = struct.unpack("<I", self._data[ptr + 0x04:ptr + 0x08])[0]
+        base_x = struct.unpack("<I", self._data[ptr + 0x08:ptr + 0x0C])[0]
+        base_y = struct.unpack("<I", self._data[ptr + 0x0C:ptr + 0x10])[0]
+        item_id = struct.unpack("<I", self._data[ptr + 0x10:ptr + 0x14])[0]
+        canvas_width = struct.unpack("<I", self._data[ptr + 0x14:ptr + 0x18])[0]
+        canvas_height = struct.unpack("<I", self._data[ptr + 0x18:ptr + 0x1C])[0]
+        unk1C = struct.unpack("<I", self._data[ptr + 0x1C:ptr + 0x20])[0]
+        unk20 = struct.unpack("<I", self._data[ptr + 0x20:ptr + 0x24])[0]
+        txos_id = struct.unpack("<I", self._data[ptr + 0x24:ptr + 0x28])[0]
+        unk28 = struct.unpack("<I", self._data[ptr + 0x28:ptr + 0x2C])[0]
+        unk2C = struct.unpack("<I", self._data[ptr + 0x2C:ptr + 0x30])[0]
 
-    def link_txos(self, txos_chunks):
-        for item in self.items:
-            for chunk in txos_chunks:
-                # 假定的, 不一定准确
-                if chunk.id + chunk.str_id == item.base_y:
-                    item.txos_ref = chunk
+        return LAY2Item(
+            tag=tag,
+            instance_id=instance_id,
+            base_x=base_x,
+            base_y=base_y,
+            item_id=item_id,
+            canvas_width=canvas_width,
+            canvas_height=canvas_height,
+            unk1C=unk1C,
+            unk20=unk20,
+            txos_id=txos_id,
+            unk28=unk28,
+            unk2C=unk2C
+        )
 
 
 if __name__ == "__main__":
@@ -269,15 +315,14 @@ if __name__ == "__main__":
             txos_chunk_idx += 64
             txos_item_id += 1
 
-        # print(f"txos_chunks: {txos_chunks}")
-        # ss = [obj.parent_texture_id for obj in txos_chunks]
-
         # --------------------------------------------------------------------------
         # Lay2 items
         # 布局逻辑块：定义 Item 如何组合成“词组”或“页面”
         lay2_items_list = []
 
         for i in range(lay2_chunk_size):
+            area_start_cursor = cursor_idx
+
             lay2_title_size = 0x08
             lay2_title_data = data[cursor_idx:cursor_idx + lay2_title_size]
             cursor_idx += lay2_title_size
@@ -285,24 +330,25 @@ if __name__ == "__main__":
                 raise Exception("LAY2 area error")
 
             lay2_area_len_size = 0x08
+            lay2_area_byte = data[cursor_idx:cursor_idx + lay2_area_len_size]
             lay2_area_data = struct.unpack(
-                '<Q', data[cursor_idx:cursor_idx + lay2_area_len_size]
+                '<Q', lay2_area_byte
             )[0]
             cursor_idx += lay2_area_len_size
 
             lay2_content = data[cursor_idx:cursor_idx + lay2_area_data]
             cursor_idx += lay2_area_data
 
-            lay2_node = LAY2Node(lay2_content)
-            lay2_node.link_txos(txos_chunks)  # 关键：在这里建立引用关系
+            total_bytes = bytearray()
+            total_bytes.extend(lay2_title_data)
+            total_bytes.extend(lay2_area_byte)
+            total_bytes.extend(lay2_content)
+            parser = LAY2Parser(total_bytes, area_start_cursor)
+            parser.parse()
+            lay2_items_list.append(parser)
 
-            for item in lay2_node.items:
-                print(f"LAY2元素引用了 TXOS ID: {item.txos_id}")
-                if item.txos_ref:
-                    print(f"  -> 对应贴图实际尺寸: {item.txos_ref.width}x{item.txos_ref.height}")
-                    print(f"  -> 对应字符串说明: {item.txos_ref.str}")
-
-            pass
+            # for item in parser.items:
+            #     print(f"TXOS ID: {item.txos_id}, Pos: ({item.base_x},{item.base_y})")
 
         print(f"Lay2 items size: {len(lay2_items_list)}")
 
@@ -359,9 +405,16 @@ if __name__ == "__main__":
 
         for chunk in txos_chunks:
             chunk.fill_str(str_list[chunk.str_id])
-            if chunk.str.startswith("word"):
-                print(chunk)
+            # print(chunk)
+            # if str_list[chunk.str_id].startswith("word"):
+            #     print(chunk)
 
-        # for lay in lay2_items_list:
-        #     lay.fill_str(str_list)
-        #     print(lay)
+        for lay in lay2_items_list:
+            print()
+            print(f"Area point: {lay.area_start_cursor}")
+            for lay2_item in lay.items:
+                lay2_item.str_content = str_list[lay2_item.item_id]
+                for chunk in txos_chunks:
+                    if chunk.id == lay2_item.txos_id:
+                        lay2_item.txos = chunk
+                        print(lay2_item)
