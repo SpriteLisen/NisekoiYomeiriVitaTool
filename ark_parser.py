@@ -38,6 +38,7 @@ class TXOSChunk:
         self.data = data
 
         self.id = id
+        self.type = struct.unpack("<I", data[0x00:0x04])[0]
         self.point_x = struct.unpack("<I", data[0x14:0x18])[0]
         self.point_y = struct.unpack("<I", data[0x18:0x1C])[0]
         self.width = struct.unpack("<I", data[0x1C:0x20])[0]
@@ -51,6 +52,7 @@ class TXOSChunk:
     def __str__(self):
         return f"""
             [
+                type: {self.type},
                 id: {self.id},
                 point_x: {self.point_x},
                 point_y: {self.point_y},
@@ -66,8 +68,7 @@ class TXOSChunk:
 class LAY2Header:
     magic: bytes
     file_size: int
-    unk0C: int
-    unk10: int
+    str_id: int
     unk14: int
     unk18: int
     unk1C: int
@@ -75,10 +76,17 @@ class LAY2Header:
     item_count: int
     canvas_width: int
     canvas_height: int
-    unk30: int
-    items_total_size: int
+    pre_header_size: int
+    header_size: int
     unk38: int
     unk3C: int
+
+    str = ""
+
+    def __repr__(self):
+        return (f"LAY2Header(str_id={self.str_id}, str={self.str}, "
+                f"unk14={self.unk14}, unk18={self.unk18}, unk1C={self.unk1C}, unk20={self.unk20}, "
+                f"canvas_width={self.canvas_width}, canvas_height={self.canvas_height})")
 
 
 @dataclass
@@ -136,33 +144,37 @@ class LAY2Parser:
             ptr += 0x30
 
         # ptr 现在指向 Item 区域结束，后续是变换层数据（暂不解析）
-        print(f"Item 区域结束于 0x{ptr:X}")
+        # print(f"Item 区域结束于 0x{ptr:X}")
 
     def _parse_header(self):
         magic = self._data[0:8]
         if magic != b'ARK LAY2':
             raise ValueError(f"无效魔数: {magic}")
 
-        file_size = struct.unpack("<I", self._data[0x08:0x0C])[0]
-        unk0C = struct.unpack("<I", self._data[0x0C:0x10])[0]
-        unk10 = struct.unpack("<I", self._data[0x10:0x14])[0]
+        file_size = struct.unpack("<Q", self._data[0x08:0x10])[0] # ✅
+        str_id = struct.unpack("<I", self._data[0x10:0x14])[0] # ✅
+
         unk14 = struct.unpack("<I", self._data[0x14:0x18])[0]
         unk18 = struct.unpack("<I", self._data[0x18:0x1C])[0]
         unk1C = struct.unpack("<I", self._data[0x1C:0x20])[0]
         unk20 = struct.unpack("<I", self._data[0x20:0x24])[0]
-        item_count = struct.unpack("<I", self._data[0x24:0x28])[0]
-        canvas_width = struct.unpack("<I", self._data[0x28:0x2C])[0]
-        canvas_height = struct.unpack("<I", self._data[0x2C:0x30])[0]
-        unk30 = struct.unpack("<I", self._data[0x30:0x34])[0]
-        items_total_size = struct.unpack("<I", self._data[0x34:0x38])[0]
-        unk38 = struct.unpack("<I", self._data[0x38:0x3C])[0]
-        unk3C = struct.unpack("<I", self._data[0x3C:0x40])[0]
+
+        item_count = struct.unpack("<I", self._data[0x24:0x28])[0] # ✅
+        canvas_width = struct.unpack("<I", self._data[0x28:0x2C])[0]  # ✅
+        canvas_height = struct.unpack("<I", self._data[0x2C:0x30])[0]  # ✅
+
+        # Always 0x30
+        pre_header_size = struct.unpack("<I", self._data[0x30:0x34])[0] # ✅
+        header_size = struct.unpack("<I", self._data[0x34:0x38])[0] # ✅
+
+        # Always 0x00, ignore
+        unk38 = struct.unpack("<I", self._data[0x38:0x3C])[0] # ✅
+        unk3C = struct.unpack("<I", self._data[0x3C:0x40])[0] # ✅
 
         self.header = LAY2Header(
             magic=magic,
             file_size=file_size,
-            unk0C=unk0C,
-            unk10=unk10,
+            str_id=str_id,
             unk14=unk14,
             unk18=unk18,
             unk1C=unk1C,
@@ -170,8 +182,8 @@ class LAY2Parser:
             item_count=item_count,
             canvas_width=canvas_width,
             canvas_height=canvas_height,
-            unk30=unk30,
-            items_total_size=items_total_size,
+            pre_header_size=pre_header_size,
+            header_size=header_size,
             unk38=unk38,
             unk3C=unk3C
         )
@@ -213,6 +225,7 @@ class LAY2Parser:
 if __name__ == "__main__":
     cursor_idx = 0
     with (open("ark_data/origin/gallery.ark", 'rb') as f):
+    # with (open("ark_data/new_gallery.ark", 'rb') as f):
         data = f.read()
 
         # --------------------------------------------------------------------------
@@ -396,6 +409,11 @@ if __name__ == "__main__":
             start_idx = struct.unpack(
                 "<I", str_idx_table_data[idx_table_idx:idx_table_idx + 4]
             )[0]
+
+            if idx_table_idx != 0 and start_idx == 0:
+                idx_table_idx += 4
+                continue
+
             str_part = parse_str(start_idx)
             str_list.append(str_part)
             idx_table_idx += 4
@@ -412,6 +430,9 @@ if __name__ == "__main__":
         for lay in lay2_items_list:
             print()
             print(f"Area point: {lay.area_start_cursor}")
+
+            lay.header.str = str_list[lay.header.str_id]
+            print(lay.header)
             for lay2_item in lay.items:
                 lay2_item.str_content = str_list[lay2_item.item_id]
                 for chunk in txos_chunks:
