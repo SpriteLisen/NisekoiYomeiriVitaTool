@@ -4,7 +4,7 @@
     "point_y": 86,
     "texture_id": 216,
     "str_area": "CHAR_1",
-    "lay2_point": "0x45E0,0xA050,0xB080,0xD2E0,0x12EE0,0x1ACD0,0x1B140",
+    "lay2_point": "0xB080,0x1ACD0,0x1B140",
     "str": "测"
   },
   {
@@ -12,7 +12,7 @@
     "point_y": 86,
     "texture_id": 217,
     "str_area": "CHAR_2",
-    "lay2_point": "0x4610,0xA080,0xB0B0,0xD310,0x12F10,0x1AD00,0x1B170",
+    "lay2_point": "0xB0B0,0x1AD00,0x1B170",
     "str": "试"
   },
   {
@@ -20,7 +20,7 @@
     "point_y": 86,
     "texture_id": 218,
     "str_area": "CHAR_3",
-    "lay2_point": "0x4640,0xA0B0,0xB0E0,0xD340,0x12F40,0x1AD30,0x1B1A0",
+    "lay2_point": "0xB0E0,0x1AD30,0x1B1A0",
     "str": "标"
   },
   {
@@ -28,96 +28,7 @@
     "point_y": 86,
     "texture_id": 219,
     "str_area": "CHAR_4",
-    "lay2_point": "0x4670,0xA0E0,0xB110,0xD370,0x12F70,0x1AD60,0x1B1D0",
+    "lay2_point": "0xB110,0x1AD60,0x1B1D0",
     "str": "题"
-  },
-  {
-    "point_x": 618,
-    "point_y": 86,
-    "texture_id": 220,
-    "str_area": "CHAR_5",
-    "lay2_point": "0x46A0,0xA110,0xB140,0xD3A0,0x12FA0,0x1AD90,0x1B200",
-    "str": " "
-  },
-
-
-
-  {
-    "point_x": 446,
-    "point_y": 86,
-    "texture_id": 216,
-    "str_area": "CHAR_1",
-    "lay2_point": "0xA050",
-    "str": "测"
-  },
-  {
-    "point_x": 489,
-    "point_y": 86,
-    "texture_id": 217,
-    "str_area": "CHAR_2",
-    "lay2_point": "0xA080",
-    "str": "试"
-  },
-  {
-    "point_x": 532,
-    "point_y": 86,
-    "texture_id": 218,
-    "str_area": "CHAR_3",
-    "lay2_point": "0xA0B0",
-    "str": "标"
-  },
-  {
-    "point_x": 575,
-    "point_y": 86,
-    "texture_id": 219,
-    "str_area": "CHAR_4",
-    "lay2_point": "0xA0E0",
-    "str": "题"
-  },
-  {
-    "point_x": 618,
-    "point_y": 86,
-    "texture_id": 220,
-    "str_area": "CHAR_5",
-    "lay2_point": "0xA110",
-    "str": " "
-  },
-
-
-
-
-  {
-    "point_x": 274,
-    "point_y": 2,
-    "texture_id": 221,
-    "str_area": "CHAR_6",
-    "lay2_point": "0x46D0",
-    "str": "小"
-  },
-  {
-    "point_x": 316,
-    "point_y": 2,
-    "texture_id": 222,
-    "str_area": "CHAR_7",
-    "lay2_point": "0x4700",
-    "str": "游"
-  },
-  {
-    "point_x": 360,
-    "point_y": 2,
-    "texture_id": 223,
-    "str_area": "CHAR_8",
-    "lay2_point": "0x4730",
-    "str": "戏"
-  },
-  {
-    "point_x": 400,
-    "point_y": 2,
-    "texture_id": 224,
-    "str_area": "CHAR_9",
-    "lay2_point": "0x4760",
-    "str": " "
   }
-
-
 ]

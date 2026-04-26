@@ -30,8 +30,9 @@ def pad_to_16_byte(ba):
 
 def extend_txos(txos_data: bytearray):
     global global_str_idx
-    for texture in texture_data:
+    for idx, texture in enumerate(texture_data):
         extend_str_list.append(texture["str_area"])
+        # extend_str_list.append(f"CHAR_{idx:04d}")
         txos_per_data[0x14:0x18] = struct.pack("<I", texture["point_x"])
         txos_per_data[0x18:0x1C] = struct.pack("<I", texture["point_y"])
         txos_per_data[0x34:0x38] = struct.pack("<I", global_str_idx)
@@ -62,13 +63,14 @@ def update_lay2(lay2_data: bytearray):
         points = texture["lay2_point"].split(",")
         for point in points:
             lay2_point = int(point, 16)
-            lay2_data[lay2_point - start_offset:(lay2_point + 4) - start_offset] = struct.pack("<I", global_str_idx)
-            extend_str_list.append(f"OBJ_ANIM_{idx:04d}")
+            # lay2_data[lay2_point - start_offset:(lay2_point + 4) - start_offset] = struct.pack("<I", global_str_idx)
+            lay2_data[lay2_point - start_offset:(lay2_point + 4) - start_offset] = struct.pack("<I", 243)
+            # extend_str_list.append(f"OBJ_ANIM_{idx:04d}")
 
             txos_id_offset = lay2_point - start_offset + 0x14
-            lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", texture["texture_id"])
-            # lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", 144)
-            global_str_idx += 1
+            # lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", texture["texture_id"])
+            # lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", 143)
+            # global_str_idx += 1
             idx += 1
 
 
@@ -103,15 +105,17 @@ def process():
         pre_data[0x2C:0x30] = struct.pack("<I", 216 + len(texture_data))
 
         txos_data = bytearray(ark_data[0xA0:0x36B8])
-        # pad_to_16_byte(txos_data)
-        extend_txos(txos_data)
+        pad_to_16_byte(txos_data)
+        # extend_txos(txos_data)
 
         lay2_data = bytearray(ark_data[0x36C0:0x1E100])
         update_lay2(lay2_data)
 
         str_header_data = bytearray(ark_data[0x1E100:0x1EFB0])
         str_content_data = bytearray(ark_data[0x1EFB0:0x22816])
-        extend_str(str_header_data, str_content_data)
+        # extend_str(str_header_data, str_content_data)
+        pad_to_16_byte(str_header_data)
+        pad_to_16_byte(str_content_data)
 
         suffix_data = bytearray(ark_data[0x22820:])
 
