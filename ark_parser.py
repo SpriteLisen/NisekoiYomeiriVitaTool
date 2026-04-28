@@ -34,7 +34,10 @@ char_mapping = {
 
 
 class TXOSChunk:
-    def __init__(self, data, id):
+    def __init__(self, point, data, id):
+        self.point = point
+        self.x_point = point + 0x14
+        self.y_point = point + 0x18
         self.data = data
 
         self.id = id
@@ -45,13 +48,16 @@ class TXOSChunk:
         self.height = struct.unpack("<I", data[0x20:0x24])[0]
         self.str_id = struct.unpack("<I", data[0x34:0x38])[0]
         self.str = ""
+        self.origin_str = ""
 
     def fill_str(self, value):
-        self.str = char_mapping.get(value, value)
+        map_str = char_mapping.get(value, value)
+        if map_str != self.str:
+            self.origin_str = value
+            self.str = map_str
 
     def __str__(self):
-        return f"""
-            [
+        return f"""            [
                 type: {self.type},
                 id: {self.id},
                 point_x: {self.point_x},
@@ -60,6 +66,7 @@ class TXOSChunk:
                 height: {self.height},
                 str_id: {self.str_id},
                 str: {self.str},
+                origin_str: {self.origin_str},
             ]
         """
 
@@ -103,6 +110,7 @@ class LAY2Item:
     txos_id: int  # TXOS 资源 ID
     unk28: int  # 未知
     unk2C: int  # 未知
+    ptr: int = 0
 
     txos = None
 
@@ -114,13 +122,14 @@ class LAY2Item:
                 f"unk1C={self.unk20}, unk20={self.unk20}, "
                 f"unk28={self.unk28}, unk2C={self.unk2C}, "
                 f"str_id={self.item_id}, str={self.str_content}, "
-                f"txos_id={self.txos_id}, txos_str={self.txos.str if self.txos else ''})")
+                f"txos_id={self.txos_id}, txos_str={self.txos.str if self.txos else ''}, txos_id_ptr={hex(self.ptr + 0x14)}, origin_str={self.txos.origin_str if self.txos.origin_str else ''})")
 
 
 class LAY2Parser:
-    def __init__(self, data: bytes, area_start_cursor):
+    def __init__(self, data: bytes, area_start_cursor, lay2_content_start_point):
         self._data = data
         self.area_start_cursor = area_start_cursor
+        self.lay2_content_start_point = lay2_content_start_point
         self.header: Optional[LAY2Header] = None
         self.items: List[LAY2Item] = []
 
@@ -138,7 +147,7 @@ class LAY2Parser:
             if ptr + 0x30 > len(self._data):
                 print(f"警告：数据不足，只解析了 {i} 个 Item")
                 break
-            item = self._parse_item(ptr)
+            item = self._parse_item(ptr, self.lay2_content_start_point + ptr)
             self.items.append(item)
             # print(f"Item {i + 1}: {item}")
             ptr += 0x30
@@ -151,25 +160,25 @@ class LAY2Parser:
         if magic != b'ARK LAY2':
             raise ValueError(f"无效魔数: {magic}")
 
-        file_size = struct.unpack("<Q", self._data[0x08:0x10])[0] # ✅
-        str_id = struct.unpack("<I", self._data[0x10:0x14])[0] # ✅
+        file_size = struct.unpack("<Q", self._data[0x08:0x10])[0]  # ✅
+        str_id = struct.unpack("<I", self._data[0x10:0x14])[0]  # ✅
 
         unk14 = struct.unpack("<I", self._data[0x14:0x18])[0]
         unk18 = struct.unpack("<I", self._data[0x18:0x1C])[0]
         unk1C = struct.unpack("<I", self._data[0x1C:0x20])[0]
         unk20 = struct.unpack("<I", self._data[0x20:0x24])[0]
 
-        item_count = struct.unpack("<I", self._data[0x24:0x28])[0] # ✅
+        item_count = struct.unpack("<I", self._data[0x24:0x28])[0]  # ✅
         canvas_width = struct.unpack("<I", self._data[0x28:0x2C])[0]  # ✅
         canvas_height = struct.unpack("<I", self._data[0x2C:0x30])[0]  # ✅
 
         # Always 0x30
-        pre_header_size = struct.unpack("<I", self._data[0x30:0x34])[0] # ✅
-        header_size = struct.unpack("<I", self._data[0x34:0x38])[0] # ✅
+        pre_header_size = struct.unpack("<I", self._data[0x30:0x34])[0]  # ✅
+        header_size = struct.unpack("<I", self._data[0x34:0x38])[0]  # ✅
 
         # Always 0x00, ignore
-        unk38 = struct.unpack("<I", self._data[0x38:0x3C])[0] # ✅
-        unk3C = struct.unpack("<I", self._data[0x3C:0x40])[0] # ✅
+        unk38 = struct.unpack("<I", self._data[0x38:0x3C])[0]  # ✅
+        unk3C = struct.unpack("<I", self._data[0x3C:0x40])[0]  # ✅
 
         self.header = LAY2Header(
             magic=magic,
@@ -188,7 +197,7 @@ class LAY2Parser:
             unk3C=unk3C
         )
 
-    def _parse_item(self, ptr: int) -> LAY2Item:
+    def _parse_item(self, ptr: int, area_ptr) -> LAY2Item:
         """解析单个 Item，固定 0x30 字节"""
         tag = struct.unpack("<I", self._data[ptr:ptr + 4])[0]
         if tag != 0x30:
@@ -218,7 +227,8 @@ class LAY2Parser:
             unk20=unk20,
             txos_id=txos_id,
             unk28=unk28,
-            unk2C=unk2C
+            unk2C=unk2C,
+            ptr=area_ptr
         )
 
 
@@ -297,6 +307,7 @@ if __name__ == "__main__":
         )[0]
         cursor_idx += txos_area_len_size
 
+        txos_start_idx = cursor_idx
         txos_content = data[cursor_idx:cursor_idx + txos_area_data]
         cursor_idx += txos_area_data
 
@@ -323,7 +334,11 @@ if __name__ == "__main__":
                 break
 
             txos_chunks.append(
-                TXOSChunk(txos_chunk_data[txos_chunk_idx:txos_chunk_idx + 64], txos_item_id)
+                TXOSChunk(
+                    txos_start_idx + txos_chunk_idx,
+                    txos_chunk_data[txos_chunk_idx:txos_chunk_idx + 64],
+                    txos_item_id
+                )
             )
             txos_chunk_idx += 64
             txos_item_id += 1
@@ -349,6 +364,7 @@ if __name__ == "__main__":
             )[0]
             cursor_idx += lay2_area_len_size
 
+            lay2_content_start_point = cursor_idx
             lay2_content = data[cursor_idx:cursor_idx + lay2_area_data]
             cursor_idx += lay2_area_data
 
@@ -356,7 +372,7 @@ if __name__ == "__main__":
             total_bytes.extend(lay2_title_data)
             total_bytes.extend(lay2_area_byte)
             total_bytes.extend(lay2_content)
-            parser = LAY2Parser(total_bytes, area_start_cursor)
+            parser = LAY2Parser(total_bytes, area_start_cursor, lay2_content_start_point)
             parser.parse()
             lay2_items_list.append(parser)
 
@@ -420,12 +436,15 @@ if __name__ == "__main__":
 
         # print(f"str_items: {len(str_list)}")
         print(str_list)
+        print()
 
         for chunk in txos_chunks:
             chunk.fill_str(str_list[chunk.str_id])
-            # print(chunk)
-            # if str_list[chunk.str_id].startswith("word"):
-            #     print(chunk)
+        #     # print(chunk)
+        #     # if str_list[chunk.str_id].startswith("word") or (chunk.width == 38 and chunk.height == 40):
+        #     if str_list[chunk.str_id].startswith("word"):
+        #         print(f"\t\t\ttxos_point: {hex(chunk.point)}, x_pint: {chunk.x_point}, y_pint: {chunk.y_point}")
+        #         print(chunk)
 
         for lay in lay2_items_list:
             print()
@@ -438,4 +457,5 @@ if __name__ == "__main__":
                 for chunk in txos_chunks:
                     if chunk.id == lay2_item.txos_id:
                         lay2_item.txos = chunk
-                        print(lay2_item)
+                        if lay2_item.canvas_width == 38 and lay2_item.canvas_height == 40:
+                            print(lay2_item)

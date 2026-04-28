@@ -2,55 +2,127 @@
   {
     "point_x": 57,
     "point_y": 2,
-    "str_id": 999,
+    "str_area": "w_jian_",
     "str": "鉴"
   },
   {
     "point_x": 99,
     "point_y": 2,
-    "str_id": 999,
+    "str_area": "w_shang",
     "str": "赏"
   },
   {
     "point_x": 142,
     "point_y": 2,
-    "str_id": 999,
+    "str_area": "w_mo___",
     "str": "模"
   },
   {
     "point_x": 186,
     "point_y": 2,
-    "str_id": 999,
+    "str_area": "w_shi__",
     "str": "式"
   },
   {
     "point_x": 230,
     "point_y": 2,
-    "str_id": 999,
-    "str": " "
+    "str_area": "w_gap_",
+    "str": "　"
+  },
+  {
+    "point_x": 445,
+    "point_y": 2,
+    "str_area": "w_lian",
+    "str": "恋"
+  },
+  {
+    "point_x": 488,
+    "point_y": 2,
+    "str_area": "w_ai___",
+    "str": "爱"
+  },
+  {
+    "point_x": 532,
+    "point_y": 2,
+    "str_area": "w_xiang",
+    "str": "相"
+  },
+  {
+    "point_x": 575,
+    "point_y": 2,
+    "str_area": "w_ce___",
+    "str": "册"
+  },
+  {
+    "point_x": 315,
+    "point_y": 43,
+    "str_area": "w_qu__",
+    "str": "曲"
+  },
+  {
+    "point_x": 357,
+    "point_y": 43,
+    "str_area": "w_diao",
+    "str": "调"
   },
   {
     "point_x": 273,
     "point_y": 2,
-    "str_id": 999,
-    "str": "恋"
+    "str_area": "w_xiao_",
+    "str": "小"
   },
   {
     "point_x": 315,
     "point_y": 2,
-    "str_id": 999,
-    "str": "爱"
+    "str_area": "w_you__",
+    "str": "游"
   },
   {
     "point_x": 360,
     "point_y": 2,
-    "str_id": 999,
-    "str": "相"
+    "str_area": "w_xi___",
+    "str": "戏"
   },
   {
-    "point_x": 402,
-    "point_y": 2,
-    "str_id": 999,
-    "str": "册"
+    "point_x": 445,
+    "point_y": 43,
+    "str_area": "w_qian_",
+    "str": "潜"
+  },
+  {
+    "point_x": 489,
+    "point_y": 43,
+    "str_area": "w_xing_",
+    "str": "行"
+  },
+  {
+    "point_x": 445,
+    "point_y": 84,
+    "str_area": "w_chou_",
+    "str": "抽"
+  },
+  {
+    "point_x": 489,
+    "point_y": 84,
+    "str_area": "w_gui___",
+    "str": "鬼"
+  },
+  {
+    "point_x": 532,
+    "point_y": 84,
+    "str_area": "w_pai__",
+    "str": "牌"
+  },
+  {
+    "point_x": 56,
+    "point_y": 43,
+    "str_area": "w_sui__",
+    "str": "随"
+  },
+  {
+    "point_x": 187,
+    "point_y": 43,
+    "str_area": "w_tan__",
+    "str": "谈"
   }
 ]

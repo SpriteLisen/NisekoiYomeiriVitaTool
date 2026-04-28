@@ -27,6 +27,8 @@ Path(
 ).mkdir(parents=True, exist_ok=True)
 Path(product_dir).mkdir(parents=True, exist_ok=True)
 
+output_eboot_file = os.path.join(product_dir, GAME_ID, "eboot.bin")
+
 extract_commands = [
     (
         f"Extract {all_apk_file}...",
@@ -98,6 +100,12 @@ repack_commands = [
             os.path.join(product_dir, GAME_ID, GAME_FILES_DIR, fs_apk_file),
             "-o", os.path.join(product_dir, GAME_ID, GAME_FILES_DIR, "pack.idx"),
             "-d", "pack"
+        ]
+    ),
+    (
+        f"Rebuild eboot ...",
+        [
+            "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
         ]
     ),
 ]

@@ -1,132 +1,90 @@
-import json
+import csv
 import struct
-
-txos_per_data = bytearray([
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x3B, 0x01, 0x00, 0x00,
-    0x2B, 0x00, 0x00, 0x00, 0x26, 0x00, 0x00, 0x00,
-    0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-    0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x78, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-])
-
-with open("ark_data/texture_data_test.json", mode="r", encoding="utf-8") as texture_data_file:
-    texture_data = json.load(texture_data_file)
-
-global_str_idx = 931
-extend_str_list = []
+from pathlib import Path
 
 
-def pad_to_16_byte(ba):
-    remainder = len(ba) % 16
-    if remainder == 0:
-        return
+def patch_eboot():
+    print("Start patching EBOOT ...")
+    output_dir = "eboot/modified"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    padding_len = 16 - remainder
-    ba.extend([0] * padding_len)
+    eboot_file = open("eboot/origin/eboot.elf", mode='rb')
+    eboot_data = bytearray(eboot_file.read())
+    eboot_file.close()
 
+    # Load & modify char bytes
+    with open("eboot/code_config.csv", mode='r', encoding="utf-8") as config_f:
+        point_map = {}
+        config_reader = csv.DictReader(config_f)
+        for row in config_reader:
+            origin_char = row["char"]
+            new_char = row["new_char"]
 
-def extend_txos(txos_data: bytearray):
-    global global_str_idx
-    for idx, texture in enumerate(texture_data):
-        extend_str_list.append(texture["str_area"])
-        # extend_str_list.append(f"CHAR_{idx:04d}")
-        txos_per_data[0x14:0x18] = struct.pack("<I", texture["point_x"])
-        txos_per_data[0x18:0x1C] = struct.pack("<I", texture["point_y"])
-        txos_per_data[0x34:0x38] = struct.pack("<I", global_str_idx)
+            point_map[row["ch"]] = row["code_point"]
 
-        print(
-            struct.unpack(
-                "<I", txos_per_data[0x34:0x38]
-            )[0]
-        )
+            origin_len = len(origin_char.encode("ascii"))
+            new_byte = new_char.encode("ascii")
+            final_byte = new_byte + ((origin_len - len(new_byte)) * b"\x00")
 
-        global_str_idx += 1
+            point = int(row["data_point"], 16)
+            eboot_data[point:point + origin_len] = final_byte
 
-        txos_data.extend(txos_per_data)
+        # Update ptr table
+        with open("eboot/ptr_config.csv", mode='r', encoding="utf-8") as ptr_f:
+            ptr_reader = csv.DictReader(ptr_f)
+            for row in ptr_reader:
+                update_point = int(row["point"], 16)
+                point_value = int(point_map[row["new_char"][1:2]], 16)
+                eboot_data[update_point:update_point + 4] = struct.pack("<I", point_value)
 
-    pad_to_16_byte(txos_data)
+        # Write new elf
+        with open(f"{output_dir}/eboot.elf", mode="wb") as out_eboot_f:
+            out_eboot_f.write(eboot_data)
 
-    # Update header
-    txos_data[0x08:0x0C] = struct.pack("<I", len(txos_data) - 0x10)
-    txos_data[0x10:0x14] = struct.pack("<I", 216 + len(texture_data))
-
-
-def update_lay2(lay2_data: bytearray):
-    global global_str_idx
-    start_offset = 0x36C0
-
-    idx = 0
-    for texture in texture_data:
-        points = texture["lay2_point"].split(",")
-        for point in points:
-            lay2_point = int(point, 16)
-            # lay2_data[lay2_point - start_offset:(lay2_point + 4) - start_offset] = struct.pack("<I", global_str_idx)
-            lay2_data[lay2_point - start_offset:(lay2_point + 4) - start_offset] = struct.pack("<I", 243)
-            # extend_str_list.append(f"OBJ_ANIM_{idx:04d}")
-
-            txos_id_offset = lay2_point - start_offset + 0x14
-            # lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", texture["texture_id"])
-            # lay2_data[txos_id_offset:txos_id_offset + 4] = struct.pack("<I", 143)
-            # global_str_idx += 1
-            idx += 1
+        print("EBOOT patching finished.")
 
 
-def extend_str(str_header_data: bytearray, str_content_data: bytearray):
-    global global_str_idx
-    str_header_data[0x10:0x14] = struct.pack("<I", global_str_idx)
+def patch_ark():
+    print("Start patching ark file ...")
+    ark_file = open("ark_data/origin/gallery.ark", mode='rb')
+    ark_data = bytearray(ark_file.read())
+    ark_file.close()
 
-    for idx, ex_str in enumerate(extend_str_list):
-        if idx != 0:
-            str_header_data.extend(struct.pack("<I", len(str_content_data)))
-        str_content_data.extend(ex_str.encode("utf-8"))
-        str_content_data.extend(b'\x00')
+    with open("ark_data/update_config.csv", mode='r', encoding="utf-8") as config_f:
+        config_reader = csv.DictReader(config_f)
+        for row in config_reader:
+            # Override str data
+            origin_char = row["origin_str"]
+            new_char = row["new_str"]
 
-    # End mark
-    str_header_data.extend(struct.pack("<I", len(str_content_data)))
+            origin_len = len(origin_char.encode("ascii"))
+            new_byte = new_char.encode("ascii")
+            final_byte = new_byte + ((origin_len - len(new_byte)) * b"\x00")
 
-    pad_to_16_byte(str_header_data)
-    pad_to_16_byte(str_content_data)
+            str_point = int(row["str_point"], 16)
+            ark_data[str_point:str_point + origin_len] = final_byte
 
-    str_header_data[0x18:0x1C] = struct.pack("<I", len(str_header_data) - 0x10)
-    str_area_size = len(str_header_data) + len(str_content_data) - 0x10
-    str_header_data[0x08:0x0C] = struct.pack("<I", str_area_size)
-    str_header_data[0x1C:0x20] = struct.pack("<I", str_area_size)
+            # Override txos data
+            txos_point = int(row["txos_point"], 16)
+            x = int(row["x"])
+            y = int(row["y"])
+            ark_data[txos_point + 0x1C:txos_point + 0x1C + 0x04] = struct.pack("<I", x)
+            ark_data[txos_point + 0x20:txos_point + 0x20 + 0x04] = struct.pack("<I", y)
 
+            # Override lay2 data
+            txos_id = int(row["txos_id"])
+            lay2_ptrs = row["lay2_ptrs"].split(",")
+            for lay2_ptr in lay2_ptrs:
+                lay2_ptr = int(lay2_ptr, 16)
+                ark_data[lay2_ptr:lay2_ptr + 0x04] = struct.pack("<I", txos_id)
 
-def process():
-    with open("ark_data/origin/gallery.ark", 'rb') as f:
-        ark_data = f.read()
+        # Write new elf
+        with open(f"ark_data/new_gallery.ark", mode="wb") as out_ark_f:
+            out_ark_f.write(ark_data)
 
-        pre_data = bytearray(ark_data[0x00:0xA0])
-
-        pre_data[0x2C:0x30] = struct.pack("<I", 216 + len(texture_data))
-
-        txos_data = bytearray(ark_data[0xA0:0x36B8])
-        pad_to_16_byte(txos_data)
-        # extend_txos(txos_data)
-
-        lay2_data = bytearray(ark_data[0x36C0:0x1E100])
-        update_lay2(lay2_data)
-
-        str_header_data = bytearray(ark_data[0x1E100:0x1EFB0])
-        str_content_data = bytearray(ark_data[0x1EFB0:0x22816])
-        # extend_str(str_header_data, str_content_data)
-        pad_to_16_byte(str_header_data)
-        pad_to_16_byte(str_content_data)
-
-        suffix_data = bytearray(ark_data[0x22820:])
-
-        with open("ark_data/new_gallery.ark", mode="wb") as new_ark_f:
-            new_ark_f.write(pre_data)
-            new_ark_f.write(txos_data)
-            new_ark_f.write(lay2_data)
-            new_ark_f.write(str_header_data)
-            new_ark_f.write(str_content_data)
-            new_ark_f.write(suffix_data)
+        print("Ark file patching finished.")
 
 
 if __name__ == "__main__":
-    process()
+    patch_eboot()
+    patch_ark()
