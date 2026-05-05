@@ -1,0 +1,92 @@
+header_top_game:【小游戏】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+word_a -> ア [✅](273, 2)
+word_so -> ソ[✅](315, 2)
+word_bi -> ビ[✅](360, 2)
+word_ba -> バ[❓]
+
+
+header_top_comment:【随谈】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+word_ko -> コ[✅](56, 43)
+word_me -> メ[✅](98, 43)
+word_n -> ン [✅](141, 43)
+word_to -> ト[✅](187, 43)
+
+
+title_first_in_out: 【鉴赏模式】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+
+
+header_top_album: 【恋爱相册】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+TEXTURE0045 -> ア[恋](445, 2)
+word_ru     -> ル[爱](488, 2)
+TEXTURE0015 -> バ[相](532, 2)
+word_mu     -> ム[册](575, 2)
+
+
+header_game_sneak: 【潜行游戏】
+word_a -> ア [✅](273, 2)
+word_so -> ソ[✅](315, 2)
+word_bi -> ビ[✅](360, 2)
+word_ba -> バ[❓]
+word_nu -> ヌ
+word_ki -> キ
+TEXTURE0024 -> ア
+word_shi -> シ
+
+
+header_top_music: 【恋爱曲调】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+word_o -> オ
+TEXTURE0006 -> ン
+word_ga -> ガ
+word_ku -> ク
+
+
+header_game_oldmaid: 【抽鬼牌】
+word_a -> ア [✅](273, 2)
+word_so -> ソ[✅](315, 2)
+word_bi -> ビ[✅](360, 2)
+word_ba -> バ[❓]
+word_ba -> バ[❓]
+TEXTURE0015 -> バ
+word_nu -> ヌ
+word_ki -> キ
+
+
+header_before: 【鉴赏模式】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
+
+
+header_after: 【鉴赏模式】
+word_gi -> ギ[✅](57, 2)
+word_ya -> ヤ[✅](99, 2)
+word_ra -> ラ[✅](142, 2)
+word_ri -> リ[✅](186, 2)
+word_i -> ー [✅](230, 2)
