@@ -234,8 +234,8 @@ class LAY2Parser:
 
 if __name__ == "__main__":
     cursor_idx = 0
-    # with (open("ark_data/origin/gallery.ark", 'rb') as f):
-    with (open("ark_data/new_gallery.ark", 'rb') as f):
+    with (open("ark_data/origin/gallery.ark", 'rb') as f):
+    # with (open("ark_data/new_gallery.ark", 'rb') as f):
         data = f.read()
 
         # --------------------------------------------------------------------------

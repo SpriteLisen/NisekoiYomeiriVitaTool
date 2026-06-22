@@ -62,6 +62,12 @@ repack_commands = [
         ]
     ),
     (
+        f"Rebuild gallery.ark ...",
+        [
+            sys.executable, "generate_gallery_ark.py", os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark")
+        ]
+    ),
+    (
         f"Rebuild script files ...",
         [
             sys.executable, "asb_tool.py", "repack",
@@ -106,6 +112,12 @@ repack_commands = [
         f"Rebuild eboot ...",
         [
             "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
+        ]
+    ),
+    (
+        f"Restore eboot auth...",
+        [
+            sys.executable, "restore_eboot_auth_tool.py", output_eboot_file
         ]
     ),
 ]
