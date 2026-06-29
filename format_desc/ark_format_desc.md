@@ -55,7 +55,35 @@ All integer values observed here are little-endian.
 
 ### ARK TEX2 Content
 
-The TEX2 chunk describes texture resources used by TXOS entries. The exact record format still requires reverse analysis. In `gallery.ark`, this chunk names texture resources such as `gallery_tex`.
+The TEX2 chunk describes texture resources used by TXOS entries. In `gallery.ark`, it is a small table of 0x10-byte records. TXOS entry +0x10 stores the zero-based TEX2 record index, so adding a new GXT requires adding a TEX2 record and pointing the new TXOS entry to that record.
+
+| Relative Offset (h) | Size (h) | Example (h) | Value (conversion) | Notes |
+|:-------------------:|:--------:|:-----------:|:------------------:|:------|
+| 0x00 | 0x04 | 05 00 00 00 | 5 | TEX2 record count. |
+| 0x04 | 0x04 | 10 00 00 00 | 0x10 bytes | TEX2 record size. |
+| 0x08 | 0x04 | 10 00 00 00 | 0x10 | First TEX2 record offset, relative to TEX2 content start. |
+| 0x0C | 0x04 | 00 00 00 00 | 0 | Unknown or padding. |
+
+### ARK TEX2 Record
+
+Each TEX2 record is 0x10 bytes.
+
+| Relative Offset (h) | Size (h) | Example (h) | Value (conversion) | Notes |
+|:-------------------:|:--------:|:-----------:|:------------------:|:------|
+| 0x00 | 0x04 | 00 00 00 00 | 0 | String ID, indexes GENESTRT. The string is a GXT path such as `gallery_tex.gxt`. |
+| 0x04 | 0x04 | 00 00 00 00 | 0 | Unknown. |
+| 0x08 | 0x04 | 00 00 00 00 | 0 | Unknown. |
+| 0x0C | 0x04 | 00 00 00 00 | 0 | Unknown. |
+
+For the current `gallery.ark`, the TEX2 table is:
+
+| TEX2 Index | String |
+|:----------:|:-------|
+| 0 | `gallery_tex.gxt` |
+| 1 | `gallery_pic.gxt` |
+| 2 | `../oldmaid/oldmaid_result_chara_tex.gxt` |
+| 3 | `gallery_music_pic.gxt` |
+| 4 | `gallery_wall_tex.gxt` |
 
 -------------------------
 
@@ -85,7 +113,7 @@ Each TXOS entry is 0x40 bytes. Entry 0 starts at chunk offset 0x18.
 | 0x04 | 0x04 | 00 00 00 00 | 0 | Unknown. |
 | 0x08 | 0x04 | 00 00 00 80 | 0x80000000 | Unknown flag. |
 | 0x0C | 0x04 | 00 00 00 00 | 0 | Unknown. |
-| 0x10 | 0x04 | 00 00 00 00 | 0 | Unknown. |
+| 0x10 | 0x04 | 00 00 00 00 | 0 | TEX2 texture index. This selects which GXT file owns the atlas coordinates below. |
 | 0x14 | 0x04 | 39 00 00 00 | 57 | Texture atlas X coordinate. |
 | 0x18 | 0x04 | 02 00 00 00 | 2 | Texture atlas Y coordinate. |
 | 0x1C | 0x04 | 26 00 00 00 | 38 | Source width. |
@@ -255,4 +283,3 @@ Important fields used by `generate_gallery_ark.py`:
 | LAY2 keyframe +0x14 | Draw offset X / visible glyph X baseline. |
 | LAY2 keyframe +0x18 | Draw offset Y / visible glyph Y baseline. |
 | LAY2 keyframe +0x24 | Vertical transition offset. Preserve relative values to keep in/out animation. |
-
