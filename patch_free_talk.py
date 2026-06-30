@@ -16,11 +16,17 @@ FREE_TALK_SLOT_TO_CODE = (
 )
 FREE_TALK_SLOT_TO_KEY = (0, 1, 2, 3, 4, 5, 6, 8, 7, 12, 10, 11, 15, 14, 9, 107)
 
+FREE_TALK_ACTIVE_SLOT_KEYS = tuple(
+    key for code, key in zip(FREE_TALK_SLOT_TO_CODE, FREE_TALK_SLOT_TO_KEY)
+    if code
+)
+
 FREE_TALK_OVERLAY_CODES = tuple(code for code in FREE_TALK_SLOT_TO_CODE if code)
 INVALID_CHILD_INDEX = 0xFF
+OVERLAY_RESERVED_CHILD_COUNT = 4
 FREE_TALK_KEY_TO_CHILD_INDEX = [INVALID_CHILD_INDEX] * 16
-for _child_index, _slot_key in enumerate(FREE_TALK_SLOT_TO_KEY[:len(FREE_TALK_OVERLAY_CODES)]):
-    FREE_TALK_KEY_TO_CHILD_INDEX[_slot_key] = _child_index
+for _overlay_index, _slot_key in enumerate(FREE_TALK_ACTIVE_SLOT_KEYS):
+    FREE_TALK_KEY_TO_CHILD_INDEX[_slot_key] = OVERLAY_RESERVED_CHILD_COUNT + _overlay_index
 FREE_TALK_KEY_TO_CHILD_INDEX = tuple(FREE_TALK_KEY_TO_CHILD_INDEX)
 
 LAY2_HEADER_SIZE = 0x30
@@ -40,12 +46,12 @@ CHILD_INDEX_TABLE_CAVE_OFFSET = 0x780
 FUNC_PREPARE_VISIBLE_VA = 0x810482B4
 FUNC_SET_VISIBLE_VA = 0x81048914
 FUNC_OBJECT_SET_VISIBLE_VA = 0x811942C0
-GALLERY_ROOT_SLOT_VA = 0x813191B4
 
 # Free-talk object field for the original slot 16 parent handle: comment_unused.
 COMMENT_UNUSED_PARENT_HANDLE_OFFSET = 0x1E8
 FREE_TALK_PLAYING_FLAG_OFFSET = 0x204
 FREE_TALK_STATE_OFFSET = 0x10
+FREE_TALK_ROOT_SLOT_CACHE_OFFSET = 0x22C
 
 HOOK_HIDE_ON_AUDIO_END = (0x0011D4F0, 0x8111D410, 0x8111D414)
 HOOK_HIDE_ON_EXIT = (0x0011DA7C, 0x8111D99C, 0x8111D9A0)
@@ -64,6 +70,10 @@ PRESERVE_ALL_PC_MASK = 0x9FFF  # r0-r12, pc
 
 def read_u32(data, point):
     return struct.unpack("<I", data[point:point + 4])[0]
+
+
+def read_i32(data, point):
+    return struct.unpack("<i", data[point:point + 4])[0]
 
 
 def read_u64(data, point):
@@ -339,7 +349,7 @@ def build_lay2_item(inst, name_id, width, height, ref_or_txos_id):
     )
 
 
-def build_static_anim_block():
+def build_static_anim_block(draw_x=0, draw_y=0):
     keyframe = struct.pack(
         "<IIIIiiiIIIIII",
         0x00140034,
@@ -347,8 +357,8 @@ def build_static_anim_block():
         0,
         0,
         0,
-        0,
-        0,
+        draw_x,
+        draw_y,
         0xFFFFFFFF,
         0,
         0,
@@ -359,89 +369,100 @@ def build_static_anim_block():
     return struct.pack("<II", 0x3C, 1) + keyframe
 
 
-def build_overlay_lay2_content(overlay_lay2_str_id, overlay_items):
-    item_count = len(overlay_items)
+def split_lay2_content(content):
+    item_count = read_u32(content, 0x14)
     item_table_end = LAY2_HEADER_SIZE + item_count * LAY2_ITEM_SIZE
-    header = struct.pack(
-        "<IIIIIIIIIIII",
-        overlay_lay2_str_id,
-        0x3C,
-        0x78,
-        0x3C,
-        0x78,
-        item_count,
-        VISIBLE_WIDTH,
-        VISIBLE_HEIGHT,
-        LAY2_ITEM_SIZE,
-        item_table_end,
-        0,
-        0,
+    if item_table_end > len(content):
+        raise ValueError("LAY2 item table exceeds chunk size")
+
+    anim_blocks = []
+    cursor = item_table_end
+    for block_index in range(item_count):
+        if cursor + 8 > len(content):
+            raise ValueError(f"Missing LAY2 animation block {block_index}")
+        block_size = read_u32(content, cursor)
+        if block_size < 8 or cursor + block_size > len(content):
+            raise ValueError(f"Invalid LAY2 animation block at 0x{cursor:X}")
+        anim_blocks.append(content[cursor:cursor + block_size])
+        cursor += block_size
+    if cursor != len(content):
+        raise ValueError("Unexpected trailing bytes in LAY2 content")
+
+    return (
+        bytearray(content[:LAY2_HEADER_SIZE]),
+        bytearray(content[LAY2_HEADER_SIZE:item_table_end]),
+        anim_blocks,
     )
+
+
+def get_item_final_draw_offset(content, item_index):
+    _, _, anim_blocks = split_lay2_content(content)
+    block = anim_blocks[item_index]
+    frame_count = read_u32(block, 0x04)
+    if frame_count == 0:
+        raise ValueError("LAY2 animation block has no keyframes")
+    frame_point = 0x08 + (frame_count - 1) * 0x34
+    return read_i32(block, frame_point + 0x14), read_i32(block, frame_point + 0x18)
+
+
+def build_overlay_lay2_content(original_content, overlay_items, overlay_draw_offset):
+    header, original_items, original_anim_blocks = split_lay2_content(original_content)
+    original_count = len(original_anim_blocks)
+    if original_count != OVERLAY_RESERVED_CHILD_COUNT:
+        raise ValueError(f"Unexpected {OVERLAY_LAY2_NAME} child count: {original_count}")
+
+    item_count = original_count + len(overlay_items)
+    item_table_end = LAY2_HEADER_SIZE + item_count * LAY2_ITEM_SIZE
+    write_u32(header, 0x14, item_count)
+    write_u32(header, 0x20, LAY2_ITEM_SIZE)
+    write_u32(header, 0x24, item_table_end)
+
     content = bytearray(header)
+    content += original_items
     for item_str_id, txos_id in overlay_items:
         content += build_lay2_item(5, item_str_id, VISIBLE_WIDTH, VISIBLE_HEIGHT, txos_id)
+    for block in original_anim_blocks:
+        content += block
     for _ in overlay_items:
-        content += build_static_anim_block()
+        content += build_static_anim_block(*overlay_draw_offset)
     return content
 
 
-def replace_lay2_animation_block(content, item_index, replacement_block):
-    item_count = read_u32(content, 0x14)
-    block_point = LAY2_HEADER_SIZE + item_count * LAY2_ITEM_SIZE
-    if item_index >= item_count or block_point > len(content):
-        raise ValueError("Invalid LAY2 item index")
-
-    for block_index in range(item_count):
-        if block_point + 8 > len(content):
-            raise ValueError(f"Missing LAY2 animation block {block_index}")
-        block_size = read_u32(content, block_point)
-        if block_size < 8 or block_point + block_size > len(content):
-            raise ValueError(f"Invalid LAY2 animation block at 0x{block_point:X}")
-        if block_index == item_index:
-            return bytearray(content[:block_point] + replacement_block + content[block_point + block_size:])
-        block_point += block_size
-
-    raise ValueError("LAY2 animation block not found")
-
-
-def patch_comment_in_out_lay2(content, strings, overlay_lay2_str_id, overlay_lay2_index):
+def get_comment_unused_local_draw_offset(content, strings, overlay_lay2_index):
     item_index = find_lay2_item_index(content, strings, OVERLAY_LAY2_NAME)
     item_point = LAY2_HEADER_SIZE + item_index * LAY2_ITEM_SIZE
-    patched = bytearray(content)
-    patched[item_point:item_point + LAY2_ITEM_SIZE] = build_lay2_item(
-        4,
-        overlay_lay2_str_id,
-        VISIBLE_WIDTH,
-        VISIBLE_HEIGHT,
-        overlay_lay2_index,
-    )
-    return replace_lay2_animation_block(patched, item_index, build_static_anim_block())
+    item_type = read_u32(content, item_point + 0x04)
+    item_ref = read_u32(content, item_point + 0x24)
+    if item_type != 4 or item_ref != overlay_lay2_index:
+        raise ValueError(f"Unexpected {OVERLAY_LAY2_NAME} parent item: type={item_type}, ref={item_ref}")
+    parent_x, parent_y = get_item_final_draw_offset(content, item_index)
+    parent_x += read_i32(content, item_point + 0x08)
+    parent_y += read_i32(content, item_point + 0x0C)
+    return -parent_x, -parent_y
 
 
-def patch_lay2_region(lay2_region, strings, overlay_lay2_str_id, overlay_items):
+def get_overlay_draw_offset(lay2_region, strings):
     overlay_lay2_index = find_lay2_index(lay2_region, strings, OVERLAY_LAY2_NAME)
+    for _, _, _, content in iter_lay2_chunks(lay2_region):
+        lay2_name = get_string(strings, read_u32(content, 0))
+        if lay2_name == FREE_TALK_PARENT_LAY2_NAME:
+            return get_comment_unused_local_draw_offset(content, strings, overlay_lay2_index)
+    raise ValueError(f"LAY2 not found: {FREE_TALK_PARENT_LAY2_NAME}")
+
+
+def patch_lay2_region(lay2_region, strings, overlay_items):
+    overlay_draw_offset = get_overlay_draw_offset(lay2_region, strings)
     result = bytearray()
-    patched_parent = False
     patched_overlay = False
 
     for _, _, _, content in iter_lay2_chunks(lay2_region):
         lay2_name = get_string(strings, read_u32(content, 0))
-        if lay2_name == FREE_TALK_PARENT_LAY2_NAME:
-            content = patch_comment_in_out_lay2(
-                bytearray(content),
-                strings,
-                overlay_lay2_str_id,
-                overlay_lay2_index,
-            )
-            patched_parent = True
-        elif lay2_name == OVERLAY_LAY2_NAME:
-            content = build_overlay_lay2_content(overlay_lay2_str_id, overlay_items)
+        if lay2_name == OVERLAY_LAY2_NAME:
+            content = build_overlay_lay2_content(content, overlay_items, overlay_draw_offset)
             patched_overlay = True
 
         result += b"ARK LAY2" + struct.pack("<Q", len(content)) + content
 
-    if not patched_parent:
-        raise ValueError(f"LAY2 not found: {FREE_TALK_PARENT_LAY2_NAME}")
     if not patched_overlay:
         raise ValueError(f"LAY2 not found: {OVERLAY_LAY2_NAME}")
 
@@ -496,7 +517,6 @@ def patch_ark(ark_path):
     str_content = data[parts["str_pos"] + CHUNK_HEADER_SIZE:parts["str_end"]]
     strings = parse_strings(str_content)
 
-    overlay_lay2_str_id = get_or_add_string(strings, OVERLAY_LAY2_NAME)
     original_lay2_count = read_u32(data, parts["arkf_pos"] + 0x14)
 
     tex2_content = bytearray(data[parts["tex2_pos"] + CHUNK_HEADER_SIZE:parts["txos_pos"]])
@@ -514,7 +534,6 @@ def patch_ark(ark_path):
     lay2_region = patch_lay2_region(
         data[parts["lay2_start"]:parts["lay2_end"]],
         strings,
-        overlay_lay2_str_id,
         overlay_items,
     )
     str_content = rebuild_strings(strings)
@@ -546,8 +565,11 @@ def encode_preserved_call_with_this_reg(call_va, this_reg, target_func_va):
     return code
 
 
-def encode_overlay_handle_load(code, func_va, skip_branches):
-    code += encode_load_pc_relative_address(R0, GALLERY_ROOT_SLOT_VA, func_va + len(code))
+def encode_overlay_handle_load(code, skip_branches):
+    code += encode_ldr(R0, R5, FREE_TALK_ROOT_SLOT_CACHE_OFFSET)
+    code += encode_cmp_imm(R0, 0)
+    append_skip_branch(code, skip_branches)
+
     code += encode_ldr(R4, R0, 0x18)
     code += encode_cmp_imm(R4, 0)
     append_skip_branch(code, skip_branches)
@@ -640,7 +662,7 @@ def encode_show_selected_overlay_func(func_va, child_index_table_va):
     code += encode_cmp_imm(R5, 0)
     append_skip_branch(code, skip_branches)
 
-    code = encode_overlay_handle_load(code, func_va, skip_branches)
+    code = encode_overlay_handle_load(code, skip_branches)
 
     code += encode_cmp_imm(R7, len(FREE_TALK_KEY_TO_CHILD_INDEX))
     append_skip_branch(code, skip_branches, cond=0x2)  # bhs
@@ -726,7 +748,7 @@ def encode_hide_overlay_func(func_va):
     code += encode_cmp_imm(R5, 0)
     append_skip_branch(code, skip_branches)
 
-    code = encode_overlay_handle_load(code, func_va, skip_branches)
+    code = encode_overlay_handle_load(code, skip_branches)
     code += encode_set_visible_for_handle_reg(func_va + len(code), R6, 0, recursive=1)
 
     patch_skip_branches(code, func_va, skip_branches)
@@ -791,6 +813,17 @@ def encode_init_hide_hook(hook_va, hide_func_va, return_va):
     code = bytearray()
     code += encode_push(PRESERVE_CALL_MASK)
     code += encode_ldr(R0, SP, 0x9C)
+    code += encode_cmp_imm(R0, 0)
+    skip_store_branch_point = append_branch_placeholder(code)
+    # r8 holds the relocated gallery root slot in this init path. Cache it on
+    # the free-talk object itself; the code cave is RX on real Vita hardware.
+    code += encode_str(R8, R0, FREE_TALK_ROOT_SLOT_CACHE_OFFSET)
+    store_done_point = len(code)
+    code[skip_store_branch_point:skip_store_branch_point + 4] = encode_arm_branch(
+        hook_va + skip_store_branch_point,
+        hook_va + store_done_point,
+        cond=0x0,
+    )
     code += encode_arm_branch(hook_va + len(code), hide_func_va, link=True)
     code += encode_pop(PRESERVE_CALL_MASK)
     code += encode_add_imm(SP, SP, 0x9C)
