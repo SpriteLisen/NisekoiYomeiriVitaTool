@@ -27,6 +27,9 @@ Path(
 ).mkdir(parents=True, exist_ok=True)
 Path(product_dir).mkdir(parents=True, exist_ok=True)
 
+free_talk_cmt_pic_dir = os.path.join(product_dir, GAME_ID, "ui", "gallery")
+Path(free_talk_cmt_pic_dir).mkdir(parents=True, exist_ok=True)
+
 output_eboot_file = os.path.join(product_dir, GAME_ID, "eboot.bin")
 
 extract_commands = [
@@ -58,7 +61,25 @@ repack_commands = [
     (
         f"Rebuild image resources ...",
         [
-            sys.executable, "repack_png_resources.py", os.path.join(extract_dir, all_extract_dir)
+            sys.executable, "repack_png_resources.py", "images/modified", os.path.join(extract_dir, all_extract_dir)
+        ]
+    ),
+    (
+        f"Rebuild free_talk_cmt resources ...",
+        [
+            sys.executable, "repack_png_resources.py", "images/free_talk_cmt", free_talk_cmt_pic_dir
+        ]
+    ),
+    (
+        f"Rebuild gallery.ark ...",
+        [
+            sys.executable, "generate_gallery_ark.py", os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark")
+        ]
+    ),
+    (
+        f"Patch free talk ...",
+        [
+            sys.executable, "patch_free_talk.py", os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark"), "eboot/modified/eboot.elf"
         ]
     ),
     (
@@ -106,6 +127,12 @@ repack_commands = [
         f"Rebuild eboot ...",
         [
             "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
+        ]
+    ),
+    (
+        f"Restore eboot auth...",
+        [
+            sys.executable, "restore_eboot_auth_tool.py", output_eboot_file
         ]
     ),
 ]

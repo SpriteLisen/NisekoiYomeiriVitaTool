@@ -4,110 +4,103 @@ import subprocess
 from pathlib import Path
 
 
-def convert_png_to_dds(png_file, output_dir):
-    """
-    将 PNG 文件转换为 DDS 文件
-    """
+FREE_TALK_DDS_SIZE = (1024, 1024)
+
+
+def tool_command(executable):
+    command = []
+    if platform.system() in ("Darwin", "Linux"):
+        command.append("wine")
+    command.append(executable)
+    return command
+
+
+def run_tool(command, failed_message, missing_message):
     try:
-        command = []
-        system = platform.system()
-
-        if system == "Darwin" or system == "Linux":
-            command.append("wine")
-
-        command.extend(
-            [
-                r".\tools\texconv\texconv.exe",
-                # "-f", "DXT3",
-                "-f", "DXT5",
-                "-ft", "dds",
-                "-o", output_dir,
-                "-y",
-                f"{png_file}"
-            ]
-        )
-
-        # 执行 texconv 转换命令
         subprocess.run(
             command,
             check=True,
             capture_output=True,
-            # text=True
         )
-        print(f"Convert {png_file.name} to dds succeed!")
     except subprocess.CalledProcessError as e:
         print("stdout:", e.stdout)
         print("stderr:", e.stderr)
-        raise RuntimeError(f"Convert dds failed: {e} => {e.stderr}")
+        raise RuntimeError(f"{failed_message}: {e} => {e.stderr}")
     except FileNotFoundError:
-        raise RuntimeError("Not find texconv.")
+        raise RuntimeError(missing_message)
+
+
+def pad_png_canvas(png_file, output_dir, width, height):
+    output_dir = Path(output_dir)
+    padded_png = output_dir / png_file.name
+    command = tool_command(r".\tools\ImageMagick\magick.exe")
+    command.extend(
+        [
+            str(png_file),
+            "-background", "none",
+            "-gravity", "northwest",
+            "-extent", f"{width}x{height}",
+            str(padded_png),
+        ]
+    )
+    run_tool(command, "Pad png failed", "Not find ImageMagick.")
+    return padded_png
+
+
+def convert_png_to_dds(png_file, output_dir, pad_to=None):
+    """
+    将 PNG 文件转换为 DDS 文件。
+
+    pad_to 用于随谈大图：先扩到 1024x1024 透明画布，再走同一套 DDS 转换。
+    """
+    png_file = Path(png_file)
+    output_dir = Path(output_dir)
+    source_file = png_file
+    if pad_to:
+        source_file = pad_png_canvas(png_file, output_dir, *pad_to)
+
+    command = tool_command(r".\tools\texconv\texconv.exe")
+    command.extend(
+        [
+            # "-f", "DXT3",
+            "-f", "DXT5",
+            "-ft", "dds",
+            "-o", str(output_dir),
+            "-y",
+            str(source_file),
+        ]
+    )
+    run_tool(command, "Convert dds failed", "Not find texconv.")
+    padded = " padded" if pad_to else ""
+    print(f"Convert {png_file.name} to{padded} dds succeed!")
 
 
 def convert_png_to_tga(png_file, output_dir):
     """
     将 PNG 文件转换为 TAG 文件
     """
-    try:
-        command = []
-        system = platform.system()
-
-        if system == "Darwin" or system == "Linux":
-            command.append("wine")
-
-        command.extend(
-            [
-                r".\tools\ImageMagick\magick.exe",
-                png_file,
-                f"{output_dir}/{png_file.stem}.tga"
-            ]
-        )
-
-        # 执行 texconv 转换命令
-        subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            # text=True
-        )
-        print(f"Convert {png_file.name} to tga succeed!")
-    except subprocess.CalledProcessError as e:
-        print("stdout:", e.stdout)
-        print("stderr:", e.stderr)
-        raise RuntimeError(f"Convert tga failed: {e} => {e.stderr}")
-    except FileNotFoundError:
-        raise RuntimeError("Not find ImageMagick.")
+    png_file = Path(png_file)
+    output_dir = Path(output_dir)
+    command = tool_command(r".\tools\ImageMagick\magick.exe")
+    command.extend(
+        [
+            str(png_file),
+            str(output_dir / f"{png_file.stem}.tga"),
+        ]
+    )
+    run_tool(command, "Convert tga failed", "Not find ImageMagick.")
+    print(f"Convert {png_file.name} to tga succeed!")
 
 
 def convert_to_gxt(img_file, output_dir):
     """
     将文件转换为 GXT 文件
     """
-    try:
-        # 构建输出GXT文件路径
-        gxt_output_path = output_dir / f"{img_file.stem}.gxt"
-
-        command = []
-        system = platform.system()
-
-        if system == "Darwin" or system == "Linux":
-            command.append("wine")
-
-        command.extend(
-            [r".\tools\psp2gxt\psp2gxt.exe", "-i", img_file, "-o", str(gxt_output_path)]
-        )
-
-        # 执行 psp2gxt 转换命令
-        subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            # text=True
-        )
-        print(f"Convert {img_file.name} to gxt succeed!")
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Convert gxt failed: {e} => {e.stderr}")
-    except FileNotFoundError:
-        raise RuntimeError("Not find psp2gxt.")
+    gxt_output_path = output_dir / f"{img_file.stem}.gxt"
+    command = tool_command(r".\tools\psp2gxt\psp2gxt.exe")
+    command.extend(["-i", str(img_file), "-o", str(gxt_output_path)])
+    run_tool(command, "Convert gxt failed", "Not find psp2gxt.")
+    print(f"Convert {img_file.name} to gxt succeed!")
 
 
 def process_png_files(input_dir, output_dir):
@@ -116,6 +109,7 @@ def process_png_files(input_dir, output_dir):
     """
     input_path = Path(input_dir)
     output_path = Path(output_dir)
+    use_padded_dxt = input_path.name == "free_talk_cmt"
 
     # 确保输出目录存在
     output_path.mkdir(parents=True, exist_ok=True)
@@ -145,8 +139,10 @@ def process_png_files(input_dir, output_dir):
 
         print(f"处理: {relative_path}")
 
-        # 字形图做 dds, 内存小很多
-        if png_file.name == 'font_j24x24_0.png':
+        # 字形图和随谈大图做 dds, 内存小很多
+        if use_padded_dxt:
+            convert_png_to_dds(png_file, tmp_img_subdir, pad_to=FREE_TALK_DDS_SIZE)
+        elif png_file.name == 'font_j24x24_0.png':
             convert_png_to_dds(png_file, tmp_img_subdir)
         else:
             convert_png_to_tga(png_file, tmp_img_subdir)
@@ -162,7 +158,7 @@ def process_png_files(input_dir, output_dir):
 
     for img_file in img_files:
         # 计算相对路径
-        relative_path = img_file.relative_to(temp_img_dir)
+        relative_path = img_file.relative_to(temp_i0mg_dir)
         gxt_subdir = output_path / relative_path.parent
 
         # 创建对应的GXT输出目录
@@ -179,9 +175,9 @@ def process_png_files(input_dir, output_dir):
 
 
 def main():
-    input_directory = "images/modified"
+    input_directory = sys.argv[1] if len(sys.argv) > 1 else "images/modified"
     # input_directory = "images/origin"
-    output_directory = sys.argv[1] if sys.argv[1] else "images/rebuild"
+    output_directory = sys.argv[2] if len(sys.argv) > 2 else "images/rebuild"
 
     # 处理PNG文件
     process_png_files(input_directory, output_directory)
