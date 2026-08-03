@@ -158,7 +158,7 @@ def process_png_files(input_dir, output_dir):
 
     for img_file in img_files:
         # 计算相对路径
-        relative_path = img_file.relative_to(temp_i0mg_dir)
+        relative_path = img_file.relative_to(temp_img_dir)
         gxt_subdir = output_path / relative_path.parent
 
         # 创建对应的GXT输出目录
