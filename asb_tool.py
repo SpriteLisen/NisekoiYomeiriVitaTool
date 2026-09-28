@@ -288,6 +288,12 @@ class ASBStringTool:
                     function_arg_pos.append(cur + 1)
                     function_args.append(self.get16(data, cur + 1))
                     cur += 3
+                elif opcode == 0x22:
+                    target = string_sections[0][0] + self.get32(data, cur + 1)
+                    if cur + 5 <= target <= end_at:
+                        cur += 5
+                    else:
+                        cur += 1
                 elif opcode == 0x0a:
                     function_arg_pos.append(cur + 1)
                     function_args.append(self.get32(data, cur + 1))
