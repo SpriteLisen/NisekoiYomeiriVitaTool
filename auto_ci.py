@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 GAME_ID = "PCSG00397"
+TROPHY_ID = "NPWR06898_00"
 GAME_FILES_DIR = "pack"
 all_apk_file = "all.apk"
 fs_apk_file = "fs.apk"
@@ -31,6 +32,11 @@ free_talk_cmt_pic_dir = os.path.join(product_dir, GAME_ID, "ui", "gallery")
 Path(free_talk_cmt_pic_dir).mkdir(parents=True, exist_ok=True)
 
 output_eboot_file = os.path.join(product_dir, GAME_ID, "eboot.bin")
+trophy_source_file = os.path.join("trop", "TROPHY.TRP")
+trophy_output_file = os.path.join(
+    product_dir, GAME_ID, "sce_sys", "trophy", TROPHY_ID, "TROPHY.TRP"
+)
+Path(trophy_output_file).parent.mkdir(parents=True, exist_ok=True)
 
 extract_commands = [
     (
@@ -133,6 +139,13 @@ repack_commands = [
         f"Restore eboot auth...",
         [
             sys.executable, "restore_eboot_auth_tool.py", output_eboot_file
+        ]
+    ),
+    (
+        f"Rebuild trophy data ...",
+        [
+            sys.executable, "build_trophy_repatch.py",
+            trophy_source_file, trophy_output_file
         ]
     ),
 ]
