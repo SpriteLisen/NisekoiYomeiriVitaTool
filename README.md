@@ -64,7 +64,7 @@ Programming: [Lisen](https://github.com/SpriteLisen)
 Graphics: [笨蛋豆芽菜](https://space.bilibili.com/3546727550290635)
 
 Editing & Proofreading: [小杨树的奇迹](https://space.bilibili.com/1640452570)
-、初銘 、[今晚月色真美](https://b23.tv/lKT20qv)、天悬星河、[炒米粉](https://github.com/FriedRiceNoodles)
+、[初銘](https://b23.tv/3Swg3IM) 、[今晚月色真美](https://b23.tv/lKT20qv)、天悬星河、[炒米粉](https://github.com/FriedRiceNoodles)
 
 Production Support: X年X班
 
