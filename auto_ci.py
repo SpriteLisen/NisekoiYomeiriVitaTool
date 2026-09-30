@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 import argparse
 import subprocess
 from pathlib import Path
@@ -79,13 +80,15 @@ repack_commands = [
     (
         f"Rebuild gallery.ark ...",
         [
-            sys.executable, "generate_gallery_ark.py", os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark")
+            sys.executable, "generate_gallery_ark.py",
+            os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark")
         ]
     ),
     (
         f"Patch free talk ...",
         [
-            sys.executable, "patch_free_talk.py", os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark"), "eboot/modified/eboot.elf"
+            sys.executable, "patch_free_talk.py",
+            os.path.join(extract_dir, all_extract_dir, "ui", "gallery", "gallery.ark"), "eboot/modified/eboot.elf"
         ]
     ),
     (
@@ -132,7 +135,9 @@ repack_commands = [
     (
         f"Rebuild eboot ...",
         [
-            "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
+            "wine", "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf",
+            output_eboot_file if platform.system() in ("Darwin", "Linux")
+            else "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
         ]
     ),
     (

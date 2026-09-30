@@ -83,7 +83,7 @@
 0x02E8,R_SystemTextPrizeMajikoiRur,
 0x02EC,マジコイ＋にるりが追加されました。,真爱模式＋中已添加琉璃。
 0x02F0,R_SystemTextPrizeSneak,
-0x02F4,アソビバにヌキアシが追加されました。,恋游区中已添加「潜行恋游」。
+0x02F4,アソビバにヌキアシが追加されました。,恋游区中已添加「潜行游戏」。
 0x02F8,R_SystemTextPrizeBaba,
 0x02FC,アソビバにババヌキが追加されました。,恋游区中已添加「抽鬼牌」。
 0x0300,R_SystemTextPrizeFreeTalk,
@@ -197,7 +197,7 @@
 0x04B0,R_SystemTextGalleryGoOldMaid,
 0x04B4,ババヌキを開始しますか？,要开始抽鬼牌吗？
 0x04B8,R_SystemTextGalleryGoSneak,
-0x04BC,ヌキアシを開始しますか？,要开始潜行恋游吗？
+0x04BC,ヌキアシを開始しますか？,要开始潜行游戏吗？
 0x04C0,R_SystemTextGalleryBgmNone,
 0x04C4, ？？？,
 0x04C8,R_SystemTextOlaMaidExitMessage,
