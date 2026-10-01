@@ -1,0 +1,2 @@
+# Convert *.png => *.tga
+magick.exe dlc_parts.png dlc_parts.tga

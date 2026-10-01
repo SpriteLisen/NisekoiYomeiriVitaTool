@@ -1,0 +1,5 @@
+# Convert *.tag to *.gxt
+psp2gxt.exe -i input.tga -o output.gxt
+
+# Convert *.tag to *.gxt, specify index count (p4 is 4bpp, p8 is 8bpp)
+psp2gxt.exe -i input.tga -p4 palette.tga -o output.gxt
