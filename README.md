@@ -4,7 +4,7 @@
 
 -------
 
-![Release](https://img.shields.io/badge/Release-1.0.2-green)
+![Release](https://img.shields.io/badge/Release-1.0.3-green)
 ![PSV](https://img.shields.io/badge/-PSVita-003791?style=flat&logo=PlayStation)
 
 ## Showcase
