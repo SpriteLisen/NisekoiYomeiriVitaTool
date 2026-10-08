@@ -134,11 +134,9 @@ repack_commands = [
     ),
     (
         f"Rebuild eboot ...",
-        [
-            "wine", "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf",
-            output_eboot_file if platform.system() in ("Darwin", "Linux")
-            else "tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file
-        ]
+        ["wine", "tools/vitasdk/vita-make-fself.exe",
+         "-c", "eboot/modified/eboot.elf", output_eboot_file] if platform.system() in ("Darwin", "Linux")
+        else ["tools/vitasdk/vita-make-fself.exe", "-c", "eboot/modified/eboot.elf", output_eboot_file]
     ),
     (
         f"Restore eboot auth...",
